@@ -162,14 +162,66 @@ export default function AdminOrgsPage() {
             </div>
 
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px', fontSize: '0.85rem' }}>Logo (URL / Chemin d'accès - optionnel)</label>
-              <input
-                type="text"
-                placeholder="ex: https://domaine.com/assets/logo.png"
-                value={form.logo}
-                onChange={(e) => setForm({ ...form, logo: e.target.value })}
-                style={{ width: '100%', padding: '10px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontFamily: 'inherit', fontSize: '0.9rem' }}
-              />
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', fontSize: '0.85rem' }}>
+                Logo de l'organisation (Import d'image ou URL)
+              </label>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="Collez une URL d'image ou importez un fichier ->"
+                  value={form.logo}
+                  onChange={(e) => setForm({ ...form, logo: e.target.value })}
+                  style={{ flex: 1, padding: '10px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontFamily: 'inherit', fontSize: '0.9rem' }}
+                />
+                
+                <label style={{
+                  background: '#f1f5f9',
+                  border: '1.5px solid #cbd5e1',
+                  color: '#334155',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.88rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                }}>
+                  📁 Importer une image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (uploadEvent) => {
+                          const base64 = uploadEvent.target?.result as string;
+                          setForm((prev) => ({ ...prev, logo: base64 }));
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
+
+              {/* Aperçu du logo en direct */}
+              {form.logo && (
+                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Aperçu du logo :</span>
+                  <img src={form.logo} alt="Aperçu" style={{ height: '36px', maxHeight: '36px', borderRadius: '6px', objectFit: 'contain' }} />
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, logo: '' })}
+                    style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '0.8rem', marginLeft: 'auto' }}
+                  >
+                    ✕ Retirer
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

@@ -4,7 +4,7 @@ Modèle Organisation — entité cliente de la plateforme IKAN AI (multi-tenant)
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, Boolean, func
+from sqlalchemy import String, Text, DateTime, Boolean, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,7 +18,7 @@ class Organisation(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     nom: Mapped[str] = mapped_column(String(255), nullable=False)
-    logo: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    logo: Mapped[str | None] = mapped_column(Text, nullable=True)
     secteur_activite: Mapped[str] = mapped_column(String(100), nullable=False, default="Télécommunications")
     pays_region: Mapped[str] = mapped_column(String(100), nullable=False, default="Tunisie / Afrique du Nord")
     email_pro: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
