@@ -96,16 +96,17 @@ def dashboard_agence(
 @router.get("/siege", response_model=DashboardSiege)
 def dashboard_siege(
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_cx_manager),
+    current_user: Utilisateur = Depends(get_cx_or_admin),
     jours: int = Query(30, ge=1, le=365),
 ):
-    """Dashboard vue siège réservé au CX Manager (Admin exclu)."""
+    """Dashboard vue siège pour CX Manager et Admin."""
     date_debut = datetime.now(timezone.utc) - timedelta(days=jours)
 
-    agences = db.query(Agence).filter(
-        Agence.organisation_id == current_user.organisation_id,
-        Agence.active == True,
-    ).all()
+    query_agences = db.query(Agence).filter(Agence.active == True)
+    if current_user.organisation_id:
+        query_agences = query_agences.filter(Agence.organisation_id == current_user.organisation_id)
+
+    agences = query_agences.all()
 
     kpis = []
     all_feedbacks = []
