@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from app.api.deps import get_current_active_user, get_cx_manager, get_cx_or_agency_manager, get_db
+from app.api.deps import get_current_active_user, get_cx_manager, get_cx_or_agency_manager, get_cx_or_admin, get_db
 from app.models.utilisateur import Utilisateur
 from app.models.feedback import Feedback
 from app.models.qr_code import QRCode
