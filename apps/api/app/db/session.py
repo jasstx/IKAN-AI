@@ -1,17 +1,21 @@
 """
 Configuration de la session SQLAlchemy et connexion à PostgreSQL.
 """
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from fastapi import HTTPException, status
 
 from app.core.config import settings
 
+logger = logging.getLogger(__name__)
 
 db_url = settings.DATABASE_URL
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-# sslmode=require uniquement si on se connecte depuis l'extérieur via *.render.com
+# Options de connexion SSL pour Render
+connect_args = {}
 if ".render.com" in db_url and "sslmode" not in db_url:
     separator = "&" if "?" in db_url else "?"
     db_url = f"{db_url}{separator}sslmode=require"
@@ -21,6 +25,7 @@ engine = create_engine(
     pool_pre_ping=True,           # Vérification de la connexion avant utilisation
     pool_size=5,                   # Taille du pool de connexions
     max_overflow=10,              # Connexions supplémentaires autorisées
+    connect_args=connect_args,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -32,12 +37,22 @@ class Base(DeclarativeBase):
 
 
 def get_db():
-    """Dépendance FastAPI : fournit une session de base de données."""
-    db = SessionLocal()
+    """Dépendance FastAPI : fournit une session de base de données sécurisée."""
+    db = None
     try:
+        db = SessionLocal()
         yield db
+    except HTTPException:
+        raise
     except Exception as e:
-        db.rollback()
-        raise e
+        logger.error(f"[DB CONNECTION ERROR] {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur de connexion PostgreSQL: {str(e)}",
+        )
     finally:
-        db.close()
+        if db is not None:
+            try:
+                db.close()
+            except Exception:
+                pass
