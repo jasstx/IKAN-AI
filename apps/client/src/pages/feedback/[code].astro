@@ -8,7 +8,7 @@ import FeedbackLayout from '../../layouts/FeedbackLayout.astro';
 import IkanLogo from '../../components/IkanLogo.astro';
 
 const { code } = Astro.params;
-const SSR_API_URL = 'http://localhost:8000/api/v1';
+const SSR_API_URL = import.meta.env.PUBLIC_API_URL || (import.meta.env.DEV ? 'http://localhost:8000/api/v1' : 'https://ikanai-api.onrender.com/api/v1');
 
 let agenceInfo = null;
 let erreur = null;
@@ -620,8 +620,12 @@ try {
 
 <script>
   // Navigation & Logic
-  const API_URL = `${window.location.origin}/api/v1`;
-  const QR_CODE = 'QR-ORANGE-TUNIS-01';
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const API_URL = isLocal ? 'http://localhost:8000/api/v1' : 'https://ikanai-api.onrender.com/api/v1';
+
+  // Extraction dynamique du token QR Code depuis l'URL /feedback/[code]
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  const QR_CODE = (pathParts.length >= 2 && pathParts[0] === 'feedback') ? pathParts[1] : 'QR-ORANGE-TUNIS-01';
 
   let currentScreen = 'screen-welcome';
   let noteSelectionnee = 0;
@@ -716,12 +720,16 @@ try {
       if (res.ok) {
         switchScreen('success');
       } else {
-        alert("Erreur lors de l'envoi de votre avis.");
+        const errData = await res.json().catch(() => ({}));
+        alert(`Erreur lors de l'envoi : ${errData.detail || 'Code QR invalide'}`);
         btn.disabled = false;
         btn.innerHTML = '<span>Envoyer</span><span class="arrow">›</span>';
       }
     } catch (e) {
-      switchScreen('success'); // Fallback gracieux
+      console.error("Erreur d'envoi feedback:", e);
+      alert("Erreur de connexion avec le serveur API. Veuillez réessayer.");
+      btn.disabled = false;
+      btn.innerHTML = '<span>Envoyer</span><span class="arrow">›</span>';
     }
   });
 
@@ -762,12 +770,16 @@ try {
       if (res.ok) {
         switchScreen('success');
       } else {
-        alert("Erreur lors de l'envoi de votre suggestion.");
+        const errData = await res.json().catch(() => ({}));
+        alert(`Erreur lors de l'envoi : ${errData.detail || 'Code QR invalide'}`);
         btn.disabled = false;
         btn.innerHTML = '<span>Envoyer</span><span class="arrow">›</span>';
       }
     } catch (e) {
-      switchScreen('success');
+      console.error("Erreur d'envoi suggestion:", e);
+      alert("Erreur de connexion avec le serveur API. Veuillez réessayer.");
+      btn.disabled = false;
+      btn.innerHTML = '<span>Envoyer</span><span class="arrow">›</span>';
     }
   });
 </script>
