@@ -27,6 +27,17 @@ def ping_qr_codes():
     return {"status": "pong"}
 
 
+@router.get("/validate-test/{code}")
+def validate_test_qr(code: str, db: Session = Depends(get_db)):
+    try:
+        from app.models.qr_code import QRCode
+        count = db.query(QRCode).count()
+        return {"code_param": code, "db_qr_count": count}
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+
 class QRCodeResponse(BaseModel):
     id: uuid.UUID
     agence_id: uuid.UUID
