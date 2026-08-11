@@ -679,7 +679,7 @@ try {
   radioIdeaOui?.addEventListener('change', () => contactFieldsIdea.style.display = 'block');
   radioIdeaNon?.addEventListener('change', () => contactFieldsIdea.style.display = 'none');
 
-  // Envoi Formulaire Note
+  // Envoi Formulaire Note (AVIS)
   document.getElementById('btnSubmitNote')?.addEventListener('click', async () => {
     if (noteSelectionnee === 0) {
       alert("Veuillez sélectionner une note avec les smileys.");
@@ -688,14 +688,22 @@ try {
 
     const btn = document.getElementById('btnSubmitNote') as HTMLButtonElement;
     btn.disabled = true;
+    btn.textContent = 'Envoi de votre avis...';
 
     const commentaire = (document.getElementById('inputCommentaire') as HTMLTextAreaElement).value.trim();
     const isRecontact = radioNoteOui?.checked || false;
+    const contactNom = (document.getElementById('contactNomNote') as HTMLInputElement)?.value.trim() || null;
+    const contactTel = (document.getElementById('contactTelNote') as HTMLInputElement)?.value.trim() || null;
+    const contactEmail = (document.getElementById('contactEmailNote') as HTMLInputElement)?.value.trim() || null;
 
     const payload: any = {
       note: noteSelectionnee,
       commentaire: commentaire || null,
       suggestion: null,
+      souhaite_etre_rappele: isRecontact,
+      contact_nom: isRecontact ? contactNom : null,
+      contact_telephone: isRecontact ? contactTel : null,
+      contact_email: isRecontact ? contactEmail : null,
     };
 
     try {
@@ -708,15 +716,16 @@ try {
       if (res.ok) {
         switchScreen('success');
       } else {
-        alert("Erreur lors de l'envoi du feedback.");
+        alert("Erreur lors de l'envoi de votre avis.");
         btn.disabled = false;
+        btn.innerHTML = '<span>Envoyer</span><span class="arrow">›</span>';
       }
     } catch (e) {
       switchScreen('success'); // Fallback gracieux
     }
   });
 
-  // Envoi Formulaire Idée
+  // Envoi Formulaire Idée (SUGGESTION)
   document.getElementById('btnSubmitIdea')?.addEventListener('click', async () => {
     const ideaText = (document.getElementById('inputIdea') as HTMLTextAreaElement).value.trim();
     if (!ideaText) {
@@ -726,11 +735,21 @@ try {
 
     const btn = document.getElementById('btnSubmitIdea') as HTMLButtonElement;
     btn.disabled = true;
+    btn.textContent = 'Envoi de votre idée...';
+
+    const isRecontact = radioIdeaOui?.checked || false;
+    const contactNom = (document.getElementById('contactNomIdea') as HTMLInputElement)?.value.trim() || null;
+    const contactTel = (document.getElementById('contactTelIdea') as HTMLInputElement)?.value.trim() || null;
+    const contactEmail = (document.getElementById('contactEmailIdea') as HTMLInputElement)?.value.trim() || null;
 
     const payload: any = {
-      note: 5, // Note par défaut pour une suggestion
+      note: 5, // Note par défaut pour enregistrer la suggestion
       commentaire: null,
       suggestion: ideaText,
+      souhaite_etre_rappele: isRecontact,
+      contact_nom: isRecontact ? contactNom : null,
+      contact_telephone: isRecontact ? contactTel : null,
+      contact_email: isRecontact ? contactEmail : null,
     };
 
     try {
@@ -743,8 +762,9 @@ try {
       if (res.ok) {
         switchScreen('success');
       } else {
-        alert("Erreur lors de l'envoi de la suggestion.");
+        alert("Erreur lors de l'envoi de votre suggestion.");
         btn.disabled = false;
+        btn.innerHTML = '<span>Envoyer</span><span class="arrow">›</span>';
       }
     } catch (e) {
       switchScreen('success');
