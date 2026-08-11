@@ -87,8 +87,12 @@ def submit_feedback(
     except Exception as e:
         db.rollback()
         import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Erreur enregistrement feedback: {str(e)}")
+        err_trace = traceback.format_exc()
+        print(f"[SUBMIT FEEDBACK ERROR] {err_trace}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur serveur submit_feedback: {str(e)} | Trace: {err_trace[-300:]}"
+        )
 
 
 @router.get("/", response_model=List[FeedbackResponse])
