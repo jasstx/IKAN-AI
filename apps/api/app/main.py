@@ -42,8 +42,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.on_event("startup")
 def on_startup():
     """Création automatique des tables, migration DDL et auto-seeding si la base de prod est vide."""
-    Base.metadata.create_all(bind=engine)
     try:
+        Base.metadata.create_all(bind=engine)
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE organisations ADD COLUMN IF NOT EXISTS logo TEXT;"))
             conn.execute(text("ALTER TABLE organisations ADD COLUMN IF NOT EXISTS secteur_activite VARCHAR(100) DEFAULT 'Télécommunications';"))
