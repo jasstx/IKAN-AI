@@ -31,8 +31,15 @@ def upgrade() -> None:
     except Exception:
         pass
 
-    # 2. Ajouter la colonne logo si elle n'existe pas
-    op.add_column('organisations', sa.Column('logo', sa.String(length=500), nullable=True))
+    # 2. Rendre la colonne logo en TEXT pour supporter les images Base64
+    try:
+        op.alter_column('organisations', 'logo', type_=sa.Text(), existing_type=sa.String(500), nullable=True)
+    except Exception:
+        pass
+    try:
+        op.add_column('organisations', sa.Column('logo', sa.Text(), nullable=True))
+    except Exception:
+        pass
 
     # 3. Ajouter secteur_activite
     op.add_column('organisations', sa.Column('secteur_activite', sa.String(length=100), nullable=True))

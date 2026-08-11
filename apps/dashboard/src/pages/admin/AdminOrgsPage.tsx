@@ -197,8 +197,31 @@ export default function AdminOrgsPage() {
                       if (file) {
                         const reader = new FileReader();
                         reader.onload = (uploadEvent) => {
-                          const base64 = uploadEvent.target?.result as string;
-                          setForm((prev) => ({ ...prev, logo: base64 }));
+                          const img = new Image();
+                          img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const MAX_SIZE = 250;
+                            let width = img.width;
+                            let height = img.height;
+                            if (width > height) {
+                              if (width > MAX_SIZE) {
+                                height = Math.round((height * MAX_SIZE) / width);
+                                width = MAX_SIZE;
+                              }
+                            } else {
+                              if (height > MAX_SIZE) {
+                                width = Math.round((width * MAX_SIZE) / height);
+                                height = MAX_SIZE;
+                              }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx?.drawImage(img, 0, 0, width, height);
+                            const resizedBase64 = canvas.toDataURL('image/png', 0.9);
+                            setForm((prev) => ({ ...prev, logo: resizedBase64 }));
+                          };
+                          img.src = uploadEvent.target?.result as string;
                         };
                         reader.readAsDataURL(file);
                       }
