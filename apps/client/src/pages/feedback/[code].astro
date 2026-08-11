@@ -1,0 +1,281 @@
+---
+/**
+ * Page principale du formulaire de feedback — accessible via QR Code.
+ * URL : /feedback/{code}
+ * BF-01, BF-02, BF-03, BF-04, BF-05
+ */
+import FeedbackLayout from '../../layouts/FeedbackLayout.astro';
+import IkanLogo from '../../components/IkanLogo.astro';
+
+const { code } = Astro.params;
+const SSR_API_URL = 'http://localhost:8000/api/v1';
+
+// Valider le QR code côté serveur (machine locale)
+let agenceInfo = null;
+let erreur = null;
+
+try {
+  const res = await fetch(`${SSR_API_URL}/qr-codes/${code}/validate`);
+  if (res.ok) {
+    agenceInfo = await res.json();
+  } else {
+    erreur = "QR Code invalide ou inactif.";
+  }
+} catch (e) {
+  erreur = "Impossible de contacter le serveur. Vérifiez votre connexion.";
+}
+---
+
+<FeedbackLayout
+  title={agenceInfo ? `Avis — ${agenceInfo.agence_nom}` : 'IKAN AI'}
+  agenceNom={agenceInfo?.agence_nom}
+>
+  <div class="card">
+    <!-- En-tête -->
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+      <IkanLogo variant="dark" size={38} />
+    </div>
+
+    {erreur ? (
+      <!-- QR Code invalide -->
+      <div style="text-align:center; padding: 32px 0;">
+        <div style="font-size:3rem; margin-bottom:16px;">⚠️</div>
+        <h1>QR Code invalide</h1>
+        <p class="subtitle">{erreur}</p>
+      </div>
+    ) : (
+      <!-- Formulaire de feedback -->
+      <div>
+        <h1>Votre avis compte !</h1>
+        <p class="subtitle">
+          {agenceInfo?.label || agenceInfo?.agence_nom}
+          {agenceInfo?.ville ? ` — ${agenceInfo.ville}` : ''}
+        </p>
+
+        <form id="feedbackForm" data-qr-code={code} data-api-url="/api/v1">
+          <!-- Étape 1 : Note (BF-02) -->
+          <div id="step-1" class="step">
+            <p style="font-weight:600; margin-bottom:16px; font-size:1.05rem;">
+              Comment évaluez-vous votre expérience ?
+            </p>
+            <div class="stars-container" id="starsContainer">
+              {[1,2,3,4,5].map(n => (
+                <button
+                  type="button"
+                  class="star-btn"
+                  data-note={n}
+                  aria-label={`${n} étoile${n > 1 ? 's' : ''}`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+            <p class="star-label" id="starLabel" style="text-align:center; margin-top:8px; color:#6b6b6b; font-size:0.9rem; min-height:20px;"></p>
+          </div>
+
+          <!-- Étape 2 : Commentaire (BF-03) -->
+          <div id="step-2" class="step" style="display:none;">
+            <label for="commentaire" style="font-weight:600; display:block; margin-bottom:8px;">
+              Souhaitez-vous ajouter un commentaire ?
+              <span style="font-weight:400; color:#6b6b6b;">(optionnel)</span>
+            </label>
+            <textarea
+              id="commentaire"
+              name="commentaire"
+              maxlength="1000"
+              rows="4"
+              placeholder="Décrivez votre expérience..."
+              style="width:100%; padding:12px; border:2px solid var(--color-border); border-radius:8px; font-family:inherit; font-size:0.95rem; resize:vertical;"
+            ></textarea>
+            <p style="text-align:right; font-size:0.8rem; color:#6b6b6b; margin-top:4px;">
+              <span id="charCount">0</span>/1000
+            </p>
+
+            <!-- Idée / Suggestion (BF-04) -->
+            <div style="margin-top:20px;">
+              <label style="font-weight:600; display:block; margin-bottom:4px;">
+                Une idée ou suggestion ?
+                <span style="font-weight:400; color:#6b6b6b;">(optionnel)</span>
+              </label>
+              <textarea
+                id="suggestion"
+                name="suggestion"
+                maxlength="500"
+                rows="3"
+                placeholder="Proposez une amélioration..."
+                style="width:100%; padding:12px; border:2px solid var(--color-border); border-radius:8px; font-family:inherit; font-size:0.95rem; resize:vertical;"
+              ></textarea>
+            </div>
+
+            <div style="display:flex; gap:12px; margin-top:20px;">
+              <button type="button" id="backBtn" class="btn-secondary">
+                ← Retour
+              </button>
+              <button type="button" id="nextBtn" class="btn-primary" style="flex:1;">
+                Soumettre l'avis
+              </button>
+            </div>
+          </div>
+
+          <!-- Étape 3 : Confirmation (BF-05) -->
+          <div id="step-3" class="step" style="display:none; text-align:center; padding: 20px 0;">
+            <div style="font-size:4rem; margin-bottom:16px;">✅</div>
+            <h1>Merci pour votre avis !</h1>
+            <p class="subtitle" style="margin-top:8px;">
+              Votre retour a bien été enregistré et contribue à améliorer la qualité de nos services.
+            </p>
+          </div>
+        </form>
+      </div>
+    )}
+  </div>
+</FeedbackLayout>
+
+<style>
+  .stars-container {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .star-btn {
+    background: none;
+    border: none;
+    font-size: 2.5rem;
+    color: #d9d2c5;
+    cursor: pointer;
+    transition: color 0.15s, transform 0.1s;
+    line-height: 1;
+    padding: 4px;
+  }
+
+  .star-btn:hover,
+  .star-btn.active {
+    color: #75B72A;
+  }
+
+  .star-btn:hover {
+    transform: scale(1.15);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border: 2px solid var(--color-border);
+    color: var(--color-text);
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+
+  .btn-secondary:hover {
+    background: var(--color-bg);
+  }
+</style>
+
+<script>
+  const STAR_LABELS = ['', 'Très insatisfait', 'Insatisfait', 'Neutre', 'Satisfait', 'Très satisfait'];
+
+  const form = document.getElementById('feedbackForm') as HTMLFormElement;
+  if (!form) throw new Error('Form not found');
+
+  const API_URL = `${window.location.origin}/api/v1`;
+  const QR_CODE = form.dataset.qrCode!;
+
+  let noteSelectionnee = 0;
+
+  // Gestion des étoiles
+  const starsContainer = document.getElementById('starsContainer')!;
+  const starLabel = document.getElementById('starLabel')!;
+  const allStars = starsContainer.querySelectorAll<HTMLButtonElement>('.star-btn');
+
+  starsContainer.addEventListener('mouseover', (e) => {
+    const btn = (e.target as HTMLElement).closest('.star-btn') as HTMLButtonElement | null;
+    if (!btn) return;
+    const hovered = parseInt(btn.dataset.note!);
+    highlightStars(hovered);
+    starLabel.textContent = STAR_LABELS[hovered];
+  });
+
+  starsContainer.addEventListener('mouseleave', () => {
+    highlightStars(noteSelectionnee);
+    starLabel.textContent = noteSelectionnee ? STAR_LABELS[noteSelectionnee] : '';
+  });
+
+  starsContainer.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.star-btn') as HTMLButtonElement | null;
+    if (!btn) return;
+    noteSelectionnee = parseInt(btn.dataset.note!);
+    highlightStars(noteSelectionnee);
+    starLabel.textContent = STAR_LABELS[noteSelectionnee];
+
+    // Passer à l'étape 2 avec un léger délai
+    setTimeout(() => {
+      showStep('step-2');
+    }, 300);
+  });
+
+  function highlightStars(count: number) {
+    allStars.forEach((s, i) => {
+      s.classList.toggle('active', i < count);
+    });
+  }
+
+  // Compteur de caractères
+  const commentaire = document.getElementById('commentaire') as HTMLTextAreaElement;
+  const charCount = document.getElementById('charCount')!;
+  commentaire.addEventListener('input', () => {
+    charCount.textContent = String(commentaire.value.length);
+  });
+
+  // Navigation étapes
+  document.getElementById('backBtn')?.addEventListener('click', () => showStep('step-1'));
+
+  document.getElementById('nextBtn')?.addEventListener('click', async () => {
+    await soumettreFeedback();
+  });
+
+  function showStep(stepId: string) {
+    ['step-1', 'step-2', 'step-3'].forEach(id => {
+      const el = document.getElementById(id)!;
+      el.style.display = id === stepId ? '' : 'none';
+    });
+  }
+
+  async function soumettreFeedback() {
+    const nextBtn = document.getElementById('nextBtn') as HTMLButtonElement;
+    nextBtn.disabled = true;
+    nextBtn.textContent = 'Envoi en cours...';
+
+    const suggestion = (document.getElementById('suggestion') as HTMLTextAreaElement).value.trim();
+
+    const payload = {
+      note: noteSelectionnee,
+      commentaire: commentaire.value.trim() || null,
+      suggestion: suggestion || null,
+    };
+
+    try {
+      const targetEndpoint = `${API_URL.replace(/\/$/, '')}/feedbacks/?qr_code=${encodeURIComponent(QR_CODE)}`;
+      const res = await fetch(targetEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        showStep('step-3');
+      } else {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        alert(`Erreur (${res.status}) : ${err.detail || 'Impossible de soumettre l\'avis.'}`);
+        nextBtn.disabled = false;
+        nextBtn.textContent = 'Soumettre l\'avis';
+      }
+    } catch (e: any) {
+      alert(`Erreur réseau : ${e?.message || e}. (URL ciblée: ${API_URL})`);
+      nextBtn.disabled = false;
+      nextBtn.textContent = 'Soumettre l\'avis';
+    }
+  }
+</script>

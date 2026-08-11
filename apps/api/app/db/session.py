@@ -1,0 +1,31 @@
+"""
+Configuration de la session SQLAlchemy et connexion à PostgreSQL.
+"""
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
+
+from app.core.config import settings
+
+
+engine = create_engine(
+    settings.DATABASE_URL,
+    pool_pre_ping=True,           # Vérification de la connexion avant utilisation
+    pool_size=10,                  # Taille du pool de connexions
+    max_overflow=20,               # Connexions supplémentaires autorisées
+)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+class Base(DeclarativeBase):
+    """Classe de base pour tous les modèles SQLAlchemy."""
+    pass
+
+
+def get_db():
+    """Dépendance FastAPI : fournit une session de base de données."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

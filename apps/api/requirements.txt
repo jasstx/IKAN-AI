@@ -1,0 +1,40 @@
+# Web framework
+fastapi==0.115.14
+uvicorn[standard]==0.34.3
+
+# Database
+sqlalchemy==2.0.41
+alembic==1.16.2
+psycopg2-binary==2.9.10
+asyncpg==0.30.0
+
+# Authentication & Security
+python-jose[cryptography]==3.5.0
+passlib[argon2]==1.7.4
+python-multipart==0.0.20
+
+# Environment & Config
+python-dotenv==1.1.1
+pydantic==2.11.2
+pydantic-settings==2.10.1
+
+# NLP / IA déterministe
+langdetect==1.0.9
+# textblob pour analyse de sentiment (français via dictionnaires)
+
+# Tasks (alertes, synthèses périodiques)
+apscheduler==3.11.0
+
+# Email
+fastapi-mail==1.4.1
+
+# CORS
+# (inclus dans FastAPI)
+
+# Validation
+email-validator==2.2.0
+
+# Testing
+pytest==8.4.1
+pytest-asyncio==1.0.0
+httpx==0.28.1

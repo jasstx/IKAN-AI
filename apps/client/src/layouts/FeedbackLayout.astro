@@ -1,0 +1,121 @@
+---
+export interface Props {
+  title?: string;
+  agenceNom?: string;
+}
+const { title = 'IKAN AI — Votre avis', agenceNom } = Astro.props;
+---
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Donnez votre avis sur votre expérience en agence — IKAN AI" />
+    <title>{title}</title>
+    <style is:global>
+      /* Design System IKAN AI — Palette Officielle */
+      :root {
+        --color-dark: #02302D;          /* Vert très foncé */
+        --color-primary: #3C7730;       /* Vert Forêt */
+        --color-primary-dark: #02302D;
+        --color-accent: #75B72A;        /* Vert Pomme */
+        --color-lime: #BCCF00;          /* Jaune-Vert Flash */
+        --color-bg: #F4F7F4;
+        --color-surface: #ffffff;
+        --color-text: #02302D;
+        --color-text-muted: #52706D;
+        --color-border: #E1EBE1;
+        --color-success: #75B72A;
+        --color-error: #DC2626;
+        --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        --radius: 16px;
+        --shadow: 0 10px 30px rgba(2, 48, 45, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--font-family);
+        background: linear-gradient(180deg, #F4F7F4 0%, #EBF3EB 100%);
+        color: var(--color-text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 24px 16px;
+      }
+
+      .card {
+        background: var(--color-surface);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        border: 1px solid var(--color-border);
+        padding: 36px 28px;
+        width: 100%;
+        max-width: 480px;
+      }
+
+      .logo {
+        font-size: 1.75rem;
+        font-weight: 900;
+        color: var(--color-dark);
+        letter-spacing: -0.5px;
+      }
+
+      .logo span {
+        color: var(--color-accent);
+      }
+
+      h1 {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: var(--color-dark);
+        margin-bottom: 4px;
+      }
+
+      .subtitle {
+        color: var(--color-text-muted);
+        font-size: 0.92rem;
+        margin-bottom: 28px;
+      }
+
+      button {
+        cursor: pointer;
+        border: none;
+        font-family: var(--font-family);
+      }
+
+      .btn-primary {
+        background: var(--color-primary);
+        color: white;
+        padding: 14px 24px;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 700;
+        width: 100%;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 14px rgba(60, 119, 48, 0.25);
+      }
+
+      .btn-primary:hover {
+        background: var(--color-dark);
+        transform: translateY(-1px);
+      }
+
+      .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+    </style>
+    <slot name="head" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

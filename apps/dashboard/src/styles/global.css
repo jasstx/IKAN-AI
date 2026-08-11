@@ -1,0 +1,61 @@
+/* Design System IKAN AI — Palette Officielle */
+:root {
+  --color-dark: #02302D;          /* Vert très foncé / Midnight Green */
+  --color-primary: #3C7730;       /* Vert Forêt / Forest Green */
+  --color-primary-dark: #02302D;
+  --color-primary-light: #EBF5E9;
+  --color-accent: #75B72A;        /* Vert Pomme / Lime Accent Green */
+  --color-accent-light: #F2FAEA;
+  --color-lime: #BCCF00;          /* Jaune-Vert Flash / Electric Lime */
+  --color-bg: #F4F7F4;
+  --color-surface: #FFFFFF;
+  --color-text: #02302D;
+  --color-text-muted: #52706D;
+  --color-border: #E1EBE1;
+  --color-success: #75B72A;
+  --color-warning: #BCCF00;
+  --color-error: #DC2626;
+  --color-info: #0284C7;
+  --sidebar-width: 250px;
+  --header-height: 64px;
+  --radius: 12px;
+  --shadow: 0 4px 20px rgba(2, 48, 45, 0.05);
+  --shadow-lg: 0 10px 30px rgba(2, 48, 45, 0.10);
+  --font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: var(--font);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--color-bg); }
+::-webkit-scrollbar-thumb { background: #CBD5CE; border-radius: 3px; }
+
+/* Utilitaires */
+.text-muted { color: var(--color-text-muted); }
+.text-success { color: var(--color-success); }
+.text-warning { color: #A3B300; }
+.text-error { color: var(--color-error); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.badge-success { background: #EBF5E9; color: #3C7730; }
+.badge-warning { background: #FCFEE6; color: #849300; }
+.badge-error { background: #FEE2E2; color: #DC2626; }
+.badge-info { background: #E0F2FE; color: #0369A1; }
+.badge-neutral { background: #F1F5F1; color: #52706D; }
