@@ -11,7 +11,8 @@ db_url = settings.DATABASE_URL
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 if "render.com" in db_url and "sslmode" not in db_url:
-    db_url = f"{db_url}?sslmode=require"
+    separator = "&" if "?" in db_url else "?"
+    db_url = f"{db_url}{separator}sslmode=require"
 
 engine = create_engine(
     db_url,
