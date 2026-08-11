@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     PUBLIC_CLIENT_URL: str = "http://localhost:4321"
 
     # Base de données
-    DATABASE_URL: str
+    DATABASE_URL: str = "postgresql://ikanai_user:jBt03ZigY2of1Ucd0YxZVzWLnSEUlvmf@dpg-d9tej2h42hec7381j2ag-a.frankfurt-postgres.render.com/ikanai"
 
     # JWT
     SECRET_KEY: str
