@@ -1,136 +1,107 @@
-# IKAN AI
+# 🟢 IKAN AI — Plateforme SaaS de Collecte & Analyse de Feedback Client par QR Code
 
-**Plateforme SaaS de Feedback Client**
-
-La voix du client, captée en agence, comprise au siège.
-
-## 🎯 Objectif
-
-IKAN AI permet aux organisations (banques, opérateurs mobiles, hôtels, restaurants) de recueillir les feedbacks clients via QR Code, d'analyser automatiquement ces données avec l'IA, et de piloter l'expérience client en temps réel.
-
-## 🏗️ Architecture
-
-Ce projet est un monorepo comprenant :
-
-- **`apps/api`** — Backend FastAPI + Service IA (Python)
-- **`apps/client`** — Page QR publique (Astro)
-- **`apps/dashboard`** — Back-office web (React 18 + Vite)
-
-## 📚 Stack Technique
-
-### Backend (`apps/api`)
-- **FastAPI** — Framework web asynchrone
-- **SQLAlchemy** — ORM
-- **Alembic** — Migrations de base de données
-- **PostgreSQL** — Base de données relationnelle
-- **JWT** — Authentification
-- **Argon2** — Hashing des mots de passe
-- **Module IA déterministe** — Analyse de sentiment, classification thématique, recommandations
-
-### Client (`apps/client`)
-- **Astro** — Framework SSR ultra-léger (<200KB)
-- Formulaire de feedback optimisé mobile
-
-### Dashboard (`apps/dashboard`)
-- **React 18** — Framework UI
-- **Vite** — Build tool
-- **Recharts** — Graphiques et KPIs
-- **Leaflet** — Carte interactive des agences
-
-## 🚀 Installation
-
-### Prérequis
-- Python 3.12+
-- Node.js 22+
-- PostgreSQL 17+
-
-### Configuration
-
-1. Cloner le repository
-```bash
-git clone <url>
-cd ikanai
-```
-
-2. Backend API
-```bash
-cd apps/api
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-3. Client Astro
-```bash
-cd apps/client
-npm install
-```
-
-4. Dashboard React
-```bash
-cd apps/dashboard
-npm install
-```
-
-## 🧩 Acteurs du Système
-
-- **Client** — Scanne le QR Code, évalue son expérience, soumet des suggestions
-- **Agency Manager** — Consulte les feedbacks et recommandations de son agence
-- **CX Manager** — Supervise l'expérience client à l'échelle de l'organisation
-- **Administrateur** — Configure la plateforme, organisations, agences, utilisateurs
-
-## 📊 Fonctionnalités Principales
-
-### Collecte
-- Scan QR Code → formulaire en <3 secondes
-- Note d'expérience (échelle à définir)
-- Commentaire libre (1000 caractères max)
-- Suggestion/idée
-
-### Analyse IA (Moteur Déterministe)
-- Analyse de sentiment (positif, neutre, négatif)
-- Classification thématique (accueil, attente, digital, infrastructure)
-- Détection de discordance (note haute + commentaire négatif)
-- Génération de recommandations d'action
-
-### Pilotage
-- Dashboard temps réel (KPIs, tendances)
-- Comparaison agences
-- Alertes automatiques (seuils configurables)
-- Gestion des suggestions (statuts : nouveau, en cours, traité)
-- Synthèses périodiques
-
-## 🔐 Sécurité
-
-- Isolation multi-tenant stricte (PostgreSQL)
-- RBAC (Role-Based Access Control)
-- JWT avec cookies HTTP-only
-- Mots de passe hachés avec Argon2
-- Protection CSRF
-- HTTPS obligatoire
-
-## 📱 Tunnels Publics & Scan QR Mobile
-
-Pour tester les **QR Codes** depuis n'importe quel réseau mobile (4G/Wi-Fi externe) :
-1. Créez un tunnel HTTPS avec Cloudflare Tunnel : `cloudflared tunnel --url http://localhost:4321`
-2. Définissez la variable dans `apps/api/.env` : `PUBLIC_CLIENT_URL=https://<votre-tunnel>.trycloudflare.com`
-3. Consulter le guide complet dans [DEPLOYMENT.md](file:///c:/Users/HentaiHeros/Orange_Projet/ikanai/DEPLOYMENT.md) pour la mise en production.
-
-## 📅 Roadmap
-
-- [x] Phase 1 — Structure du monorepo
-- [ ] Phase 2 — Schéma de base de données
-- [ ] Phase 3 — Backend FastAPI
-- [ ] Phase 4 — Module IA
-- [ ] Phase 5 — Client Astro
-- [ ] Phase 6 — Dashboard React
-- [ ] Phase 7 — Tests & déploiement
-- [ ] Phase 8 — Documentation
-
-## 📝 Licence
-
-Propriétaire — Orange Summer Challenge / NOVAX
+> **La voix du client, captée en agence, comprise au siège.**  
+> *Projet développé dans le cadre de l'Orange Summer Challenge.*
 
 ---
 
-**Contact** : contact@ikanai.app
+## 🚀 Présentation du Projet
+
+**IKAN AI** est une solution SaaS innovante permettant aux organisations à réseau d'agences (banques, télécoms, hôtellerie, restauration) de :
+1. **Capturer les avis clients en temps réel** via un QR Code disponible sur borne/comptoir.
+2. **Analyser automatiquement chaque feedback grâce à un moteur d'IA** (analyse de sentiment, classification thématique, criticité, détection des anomalies/discordances).
+3. **Piloter l'expérience client à toutes les échelles** via des tableaux de bord interactifs dédiés aux Administrateurs, CX Managers (Siège) et Agency Managers.
+
+---
+
+## 🎨 Charte Visuelle & Identité de Marque
+
+| Couleur | Code Hexa | Rôle Visuel |
+|---|---|---|
+| 🟢 **Midnight Green** | `#02302D` | Navigation principale & en-têtes contrastés |
+| 🌿 **Forest Green** | `#3C7730` | Couleur primaire officielle & boutons principaux |
+| 🍃 **Lime Accent** | `#75B72A` | Accents, survols & étoiles de satisfaction |
+| ⚡ **Electric Lime** | `#BCCF00` | Indicateurs d'état & badges d'alerte |
+
+---
+
+## 🏗️ Architecture du Monorepo
+
+```
+ikanai/
+├── apps/
+│   ├── api/          # ⚙️ Backend FastAPI (Python 3.12, SQLModel/SQLAlchemy, PostgreSQL, JWT)
+│   ├── client/       # 📱 Formulaire Client QR Mobile (Astro 5 + Node Adapter, <200KB)
+│   └── dashboard/    # 🖥️ Back-Office Web Management (React 18 + Vite, Recharts, Leaflet)
+├── DEPLOYMENT.md     # 📖 Guide de déploiement Cloudflare / Tunnels
+└── RENDER_DEPLOYMENT_TUTORIAL.md # 🚀 Tutoriel pas-à-pas de déploiement Cloud Render
+```
+
+---
+
+## ⚡ Stack Technique
+
+### ⚙️ Backend (`apps/api`)
+- **FastAPI** — Framework web asynchrone ultra-rapide.
+- **PostgreSQL / SQLAlchemy** — Base de données relationnelle & ORM.
+- **Alembic** — Gestion des migrations de schémas BDD.
+- **Moteur d'IA Déterministe** — Sentiment analysis, classification thématique & détection des discordances.
+- **Sécurité** — Auth JWT sécurisée, hashing Argon2 & RBAC strict (4 rôles).
+
+### 📱 Client Mobile QR (`apps/client`)
+- **Astro 5** — Chargement instantané (<3s) optimisé pour l'expérience mobile 4G.
+- Formulaire réactif par étapes (Étoiles, Commentaire, Suggestions).
+
+### 🖥️ Dashboard Management (`apps/dashboard`)
+- **React 18 + Vite** — SPA fluide avec routage sécurisé par rôle.
+- **Recharts & Leaflet** — Graphiques de tendances, répartition des sentiments & cartographie des agences.
+
+---
+
+## 👥 Rôles & Matrice des Droits (RBAC)
+
+| Rôle | Périmètre & Accès |
+|---|---|
+| 🏛️ **Administrateur** | Gestion structurelle (Organisations, Utilisateurs, Paramètres Système, Matrice des droits). |
+| 📊 **CX Manager (Siège)** | Vue d'ensemble de l'organisation, indicateurs agrégés, agences, alertes & recommandations globales. |
+| 🏪 **Agency Manager** | Dashboard spécifique à son agence, feedbacks locaux, alertes & suggestions associées. |
+| 📱 **Client** | Formulaire public anonyme d'évaluation par QR Code. |
+
+---
+
+## 🛠️ Installation & Démarrage Local
+
+```bash
+# 1. Cloner le projet
+git clone https://github.com/jasstx/IKAN-AI.git
+cd IKAN-AI
+
+# 2. Lancer le Backend API
+cd apps/api
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+python run.py
+
+# 3. Lancer le Dashboard React (dans un autre terminal)
+cd apps/dashboard
+npm install
+npm run dev
+
+# 4. Lancer le Client Astro (dans un autre terminal)
+cd apps/client
+npm install
+npm run dev
+```
+
+---
+
+## 🚀 Déploiement Cloud (Production Render)
+
+Suivez le guide détaillé [`RENDER_DEPLOYMENT_TUTORIAL.md`](RENDER_DEPLOYMENT_TUTORIAL.md) pour déployer PostgreSQL, le Backend API, le Dashboard et le Client Astro sur [Render.com](https://render.com).
+
+---
+
+## 📝 Licence & Propriété
+
+*Propriétaire — Orange Summer Challenge / Team NOVAX*
