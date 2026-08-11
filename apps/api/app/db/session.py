@@ -14,9 +14,8 @@ db_url = settings.DATABASE_URL
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-# Options de connexion SSL pour Render
-connect_args = {}
-if ".render.com" in db_url and "sslmode" not in db_url:
+# sslmode=require systématique sur toutes les bases distantes (Render PostgreSQL)
+if "localhost" not in db_url and "127.0.0.1" not in db_url and "sslmode" not in db_url:
     separator = "&" if "?" in db_url else "?"
     db_url = f"{db_url}{separator}sslmode=require"
 
@@ -25,7 +24,6 @@ engine = create_engine(
     pool_pre_ping=True,           # Vérification de la connexion avant utilisation
     pool_size=5,                   # Taille du pool de connexions
     max_overflow=10,              # Connexions supplémentaires autorisées
-    connect_args=connect_args,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
