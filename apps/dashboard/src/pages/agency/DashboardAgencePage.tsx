@@ -93,25 +93,77 @@ export default function DashboardAgencePage() {
         }}>{toast}</div>
       )}
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-            🏪 {data.agence_nom}
-          </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', marginTop: '2px' }}>
-            Tableau de bord de votre agence — {data.periode}
-          </p>
+      {/* ── Header Carte Agence (Conforme à l'image UI) ── */}
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        padding: '24px 28px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+        border: '1px solid #E5E7EB',
+        marginBottom: '24px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '18px' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '14px',
+            background: '#E8F5E9',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 21H21M3 7L12 3L21 7V21H3V7Z" stroke="#02302D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+
+          <div>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#02302D', margin: 0 }}>
+              {data.agence_nom}
+            </h1>
+            <p style={{ color: '#71717A', fontSize: '0.88rem', marginTop: '2px', margin: 0 }}>
+              Tableau de bord de votre agence — {jours} derniers jours
+            </p>
+          </div>
         </div>
-        <select
-          value={jours}
-          onChange={(e) => setJours(Number(e.target.value))}
-          style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontFamily: 'inherit', fontSize: '0.88rem', cursor: 'pointer' }}
-        >
-          <option value={7}>7 derniers jours</option>
-          <option value={30}>30 derniers jours</option>
-          <option value={90}>90 derniers jours</option>
-        </select>
+
+        <div style={{ position: 'relative', width: '100%' }}>
+          <select
+            value={jours}
+            onChange={(e) => setJours(Number(e.target.value))}
+            style={{
+              width: '100%',
+              padding: '14px 18px',
+              borderRadius: '12px',
+              border: '1px solid #E4E4E7',
+              background: '#FFFFFF',
+              fontFamily: 'inherit',
+              fontSize: '0.95rem',
+              fontWeight: 500,
+              color: '#18181B',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            <option value={7}>7 derniers jours</option>
+            <option value={30}>30 derniers jours</option>
+            <option value={90}>90 derniers jours</option>
+          </select>
+          <div style={{
+            position: 'absolute',
+            right: '18px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            pointerEvents: 'none',
+            color: '#52525B',
+            fontSize: '0.75rem',
+          }}>
+            ▼
+          </div>
+        </div>
       </div>
 
       {/* KPIs */}

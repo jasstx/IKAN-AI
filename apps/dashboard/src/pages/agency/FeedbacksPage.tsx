@@ -148,16 +148,42 @@ export default function FeedbacksPage() {
         }}>{toast}</div>
       )}
 
-      {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-          💬 Feedbacks Clients ({filteredFeedbacks.length})
-        </h1>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', marginTop: '4px' }}>
-          {isCXOrAdmin
-            ? 'Supervision globale des avis clients sur l\'ensemble des agences de votre organisation.'
-            : 'Consultation et suivi des avis soumis dans votre agence.'}
-        </p>
+      {/* ── Header Carte Feedbacks ── */}
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        padding: '24px 28px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+        border: '1px solid #E5E7EB',
+        marginBottom: '24px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '14px',
+            background: '#E8F5E9',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21 15A2 2 0 0 1 19 17H7L3 21V5A2 2 0 0 1 5 3H19A2 2 0 0 1 21 5V15Z" stroke="#02302D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+
+          <div>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#02302D', margin: 0 }}>
+              Feedbacks Clients ({filteredFeedbacks.length})
+            </h1>
+            <p style={{ color: '#71717A', fontSize: '0.88rem', marginTop: '2px', margin: 0 }}>
+              {isCXOrAdmin
+                ? 'Supervision globale des avis clients sur l\'ensemble des agences de votre organisation.'
+                : 'Consultation et suivi des avis soumis dans votre agence.'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Mini-statistiques */}

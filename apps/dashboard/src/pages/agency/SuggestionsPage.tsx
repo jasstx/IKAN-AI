@@ -71,41 +71,65 @@ export default function SuggestionsPage() {
         }}>{toast}</div>
       )}
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-            💡 Suggestions & Idées Clients ({filteredSuggestions.length})
-          </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', marginTop: '2px' }}>
-            Idées d'amélioration proposées directement par vos clients en agence.
-          </p>
-        </div>
+      {/* ── Header Carte Suggestions ── */}
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        padding: '24px 28px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+        border: '1px solid #E5E7EB',
+        marginBottom: '24px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '14px',
+            background: '#E8F5E9',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18H15M10 22H14M12 2C8.13 2 5 5.13 5 9C5 11.38 6.19 13.47 8 14.74V17C8 17.55 8.45 18 9 18H15C15.55 18 16 17.55 16 17V14.74C17.81 13.47 19 11.38 19 9C19 5.13 15.87 2 12 2Z" stroke="#02302D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
 
-        {/* Filtre par statut */}
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {[
-            { key: 'all', label: 'Toutes' },
-            { key: 'nouveau', label: 'Nouveau' },
-            { key: 'en_cours', label: 'En cours' },
-            { key: 'traite', label: 'Traité' },
-            { key: 'rejete', label: 'Rejeté' },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setFilterStatut(key)}
-              style={{
-                padding: '6px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                fontFamily: 'inherit', fontSize: '0.82rem', fontWeight: 600,
-                background: filterStatut === key ? 'var(--color-primary)' : 'white',
-                color: filterStatut === key ? 'white' : '#64748b',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              }}
-            >
-              {label}
-            </button>
-          ))}
+          <div>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#02302D', margin: 0 }}>
+              Suggestions & Idées Clients ({filteredSuggestions.length})
+            </h1>
+            <p style={{ color: '#71717A', fontSize: '0.88rem', marginTop: '2px', margin: 0 }}>
+              Idées d'amélioration proposées directement par vos clients en agence.
+            </p>
+          </div>
         </div>
+      </div>
+
+      {/* Filtre par statut */}
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '20px' }}>
+        {[
+          { key: 'all', label: 'Toutes' },
+          { key: 'nouveau', label: 'Nouveau' },
+          { key: 'en_cours', label: 'En cours' },
+          { key: 'traite', label: 'Traité' },
+          { key: 'rejete', label: 'Rejeté' },
+        ].map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setFilterStatut(key)}
+            style={{
+              padding: '6px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: '0.82rem', fontWeight: 600,
+              background: filterStatut === key ? 'var(--color-primary)' : 'white',
+              color: filterStatut === key ? 'white' : '#64748b',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Liste des Suggestions */}

@@ -162,17 +162,47 @@ export default function AdminAgencesPage() {
         }}>{toast}</div>
       )}
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-            🏪 {isAdmin ? 'Gestion des Agences' : 'Mes Agences & Bornes QR'}
-          </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', marginTop: '2px' }}>
-            {isAdmin ? 'Gestion globale de la structure agences de toutes les organisations.' : 'Créez et gérez les agences de votre organisation ainsi que leurs QR codes de bornes.'}
-          </p>
+      {/* ── Header Carte Agences ── */}
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        padding: '24px 28px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+        border: '1px solid #E5E7EB',
+        marginBottom: '24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '16px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '14px',
+            background: '#E8F5E9',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 21H21M3 7L12 3L21 7V21H3V7Z" stroke="#02302D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+
+          <div>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#02302D', margin: 0 }}>
+              {isAdmin ? 'Gestion des Agences' : 'Mes Agences & Bornes QR'} ({agences.length})
+            </h1>
+            <p style={{ color: '#71717A', fontSize: '0.88rem', marginTop: '2px', margin: 0 }}>
+              {isAdmin ? 'Gestion globale de la structure agences de toutes les organisations.' : 'Créez et gérez les agences de votre organisation ainsi que leurs QR codes de bornes.'}
+            </p>
+          </div>
         </div>
-        <button onClick={openCreate} style={btnPrimary}>+ Nouvelle Agence</button>
+
+        <button onClick={openCreate} style={{ ...btnPrimary, borderRadius: '10px', padding: '10px 18px' }}>+ Nouvelle Agence</button>
       </div>
 
       {/* Table */}

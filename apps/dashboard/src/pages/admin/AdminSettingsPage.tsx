@@ -77,14 +77,41 @@ export default function AdminSettingsPage() {
         }}>{toast}</div>
       )}
 
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-primary)' }}>⚙️ Paramètres Système</h1>
-        <p style={{ color: 'var(--color-text-muted)', marginTop: '6px', fontSize: '0.9rem' }}>
-          Configuration générale de la plateforme IKAN AI.
-          {settings?.date_modification && (
-            <span> Dernière modification le {new Date(settings.date_modification).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.</span>
-          )}
-        </p>
+      {/* ── Header Carte Paramètres Système ── */}
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        padding: '24px 28px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+        border: '1px solid #E5E7EB',
+        marginBottom: '24px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '14px',
+            background: '#E8F5E9',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="#02302D" strokeWidth="2"/>
+              <path d="M19.4 15A1.65 1.65 0 0 0 20 12A1.65 1.65 0 0 0 19.4 9M4.6 9A1.65 1.65 0 0 0 4 12A1.65 1.65 0 0 0 4.6 15" stroke="#02302D" strokeWidth="2"/>
+            </svg>
+          </div>
+
+          <div>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#02302D', margin: 0 }}>
+              Paramètres Système
+            </h1>
+            <p style={{ color: '#71717A', fontSize: '0.88rem', marginTop: '2px', margin: 0 }}>
+              Configuration générale de la plateforme IKAN AI.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Section 1 : Identité de la plateforme */}

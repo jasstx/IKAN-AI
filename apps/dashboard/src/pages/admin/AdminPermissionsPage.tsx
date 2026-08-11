@@ -34,12 +34,41 @@ export default function AdminPermissionsPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-primary)' }}>🔐 Rôles & Permissions</h1>
-        <p style={{ color: 'var(--color-text-muted)', marginTop: '6px', fontSize: '0.9rem' }}>
-          Matrice complète des droits d'accès accordés à chaque rôle dans la plateforme IKAN AI.
-          Les rôles sont fixes et définis dans le cahier des charges du projet.
-        </p>
+      {/* ── Header Carte Rôles & Permissions ── */}
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        padding: '24px 28px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+        border: '1px solid #E5E7EB',
+        marginBottom: '24px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '14px',
+            background: '#E8F5E9',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="11" width="18" height="11" rx="2" stroke="#02302D" strokeWidth="2"/>
+              <path d="M7 11V7A5 5 0 0 1 17 7V11" stroke="#02302D" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </div>
+
+          <div>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#02302D', margin: 0 }}>
+              Rôles & Permissions RBAC
+            </h1>
+            <p style={{ color: '#71717A', fontSize: '0.88rem', marginTop: '2px', margin: 0 }}>
+              Matrice complète des droits d'accès accordés à chaque rôle dans la plateforme IKAN AI.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Bandeaux de rôles */}

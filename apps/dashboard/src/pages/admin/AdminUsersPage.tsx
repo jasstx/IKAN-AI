@@ -121,25 +121,51 @@ export default function AdminUsersPage() {
         }}>{toast}</div>
       )}
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-            👥 {isCXManager ? 'Chefs d\'Agence (Agency Managers)' : 'Gestion des Utilisateurs'}
-          </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', marginTop: '2px' }}>
-            {isCXManager ? 'Créez et attribuez les responsables pour les agences de votre organisation.' : 'Gestion complète des comptes et des attributions de rôles.'}
-          </p>
+      {/* ── Header Carte Utilisateurs ── */}
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        padding: '24px 28px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+        border: '1px solid #E5E7EB',
+        marginBottom: '24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '16px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '14px',
+            background: '#E8F5E9',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17 21V19A4 4 0 0 0 13 15H5A4 4 0 0 0 1 19V21M9 11A4 4 0 1 0 9 3A4 4 0 0 0 9 11ZM23 21V19A4 4 0 0 0 19.12 15.16M16 3.13A4 4 0 0 1 16 11" stroke="#02302D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+
+          <div>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#02302D', margin: 0 }}>
+              {isCXManager ? 'Chefs d\'Agence (Agency Managers)' : 'Gestion des Utilisateurs'} ({users.length})
+            </h1>
+            <p style={{ color: '#71717A', fontSize: '0.88rem', marginTop: '2px', margin: 0 }}>
+              {isCXManager ? 'Créez et attribuez les responsables pour les agences de votre organisation.' : 'Gestion complète des comptes et des attributions de rôles.'}
+            </p>
+          </div>
         </div>
+
         <button
           onClick={() => setShowForm(!showForm)}
-          style={{
-            background: 'var(--color-primary)', color: 'white', border: 'none',
-            borderRadius: '8px', padding: '10px 18px', cursor: 'pointer',
-            fontFamily: 'inherit', fontWeight: 600, fontSize: '0.9rem',
-          }}
+          style={{ background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 18px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, fontSize: '0.9rem' }}
         >
-          {showForm ? '✕ Annuler' : '+ Nouvel Utilisateur'}
+          {showForm ? 'Fermer' : '+ Nouvel Utilisateur'}
         </button>
       </div>
 
