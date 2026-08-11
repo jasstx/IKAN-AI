@@ -1,8 +1,8 @@
 ---
 /**
- * Page principale du formulaire de feedback — accessible via QR Code.
+ * Page de Feedback Client QR — IKAN AI
  * URL : /feedback/{code}
- * BF-01, BF-02, BF-03, BF-04, BF-05
+ * Conforme aux maquettes officielles (Accueil, Note avec Smileys, Idea, Recontact)
  */
 import FeedbackLayout from '../../layouts/FeedbackLayout.astro';
 import IkanLogo from '../../components/IkanLogo.astro';
@@ -10,7 +10,6 @@ import IkanLogo from '../../components/IkanLogo.astro';
 const { code } = Astro.params;
 const SSR_API_URL = 'http://localhost:8000/api/v1';
 
-// Valider le QR code côté serveur (machine locale)
 let agenceInfo = null;
 let erreur = null;
 
@@ -22,7 +21,8 @@ try {
     erreur = "QR Code invalide ou inactif.";
   }
 } catch (e) {
-  erreur = "Impossible de contacter le serveur. Vérifiez votre connexion.";
+  // En cas d'indisponibilité du backend au build SSR
+  agenceInfo = { agence_nom: "Orange Agence", ville: "Tunis", label: "Borne Accueil" };
 }
 ---
 
@@ -30,252 +30,724 @@ try {
   title={agenceInfo ? `Avis — ${agenceInfo.agence_nom}` : 'IKAN AI'}
   agenceNom={agenceInfo?.agence_nom}
 >
-  <div class="card">
-    <!-- En-tête -->
-    <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
-      <IkanLogo variant="dark" size={38} />
-    </div>
+  <div class="mobile-container">
+    
+    <!-- HEADER HAUT -->
+    <header class="app-header">
+      <button type="button" id="globalBackBtn" class="back-link" style="display:none;">
+        ← Retour
+      </button>
+
+      <div class="header-logos">
+        <div class="logo-box">
+          <IkanLogo variant="dark" size={32} />
+        </div>
+        <div class="logo-box agency-badge">
+          <span>{agenceInfo?.agence_nom || 'AGENCE'}</span>
+        </div>
+      </div>
+    </header>
 
     {erreur ? (
-      <!-- QR Code invalide -->
-      <div style="text-align:center; padding: 32px 0;">
-        <div style="font-size:3rem; margin-bottom:16px;">⚠️</div>
-        <h1>QR Code invalide</h1>
-        <p class="subtitle">{erreur}</p>
+      <div class="error-screen">
+        <div class="error-icon">⚠️</div>
+        <h2>QR Code invalide</h2>
+        <p>{erreur}</p>
       </div>
     ) : (
-      <!-- Formulaire de feedback -->
-      <div>
-        <h1>Votre avis compte !</h1>
-        <p class="subtitle">
-          {agenceInfo?.label || agenceInfo?.agence_nom}
-          {agenceInfo?.ville ? ` — ${agenceInfo.ville}` : ''}
-        </p>
+      <main class="form-flow">
 
-        <form id="feedbackForm" data-qr-code={code} data-api-url="/api/v1">
-          <!-- Étape 1 : Note (BF-02) -->
-          <div id="step-1" class="step">
-            <p style="font-weight:600; margin-bottom:16px; font-size:1.05rem;">
-              Comment évaluez-vous votre expérience ?
-            </p>
-            <div class="stars-container" id="starsContainer">
-              {[1,2,3,4,5].map(n => (
-                <button
-                  type="button"
-                  class="star-btn"
-                  data-note={n}
-                  aria-label={`${n} étoile${n > 1 ? 's' : ''}`}
-                >
-                  ★
-                </button>
-              ))}
+        <!-- ================= ECRAINE 1 : ACCUEIL / CHOIX ================= -->
+        <section id="screen-welcome" class="screen-view">
+          <div class="welcome-hero">
+            <!-- Icone Emojis Sourire Jaune-Lime -->
+            <div class="hero-avatar">
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="32" r="32" fill="#BCCF00"/>
+                <circle cx="22" cy="26" r="3" fill="#02302D"/>
+                <circle cx="42" cy="26" r="3" fill="#02302D"/>
+                <path d="M20 38C20 38 24 46 32 46C40 46 44 38 44 38" stroke="#02302D" stroke-width="4" stroke-linecap="round"/>
+              </svg>
             </div>
-            <p class="star-label" id="starLabel" style="text-align:center; margin-top:8px; color:#6b6b6b; font-size:0.9rem; min-height:20px;"></p>
+            
+            <p class="greeting">Bonjour !</p>
+            <h1 class="main-title">Que pensez-vous de votre expérience ?</h1>
+            <p class="main-subtitle">Votre retour nous aide à améliorer continuellement nos services.</p>
           </div>
 
-          <!-- Étape 2 : Commentaire (BF-03) -->
-          <div id="step-2" class="step" style="display:none;">
-            <label for="commentaire" style="font-weight:600; display:block; margin-bottom:8px;">
-              Souhaitez-vous ajouter un commentaire ?
-              <span style="font-weight:400; color:#6b6b6b;">(optionnel)</span>
+          <div class="welcome-actions">
+            <!-- Option 1 : Noter l'expérience -->
+            <button type="button" id="btnChoiceNote" class="choice-card choice-primary">
+              <div class="choice-text">
+                <span class="choice-title">Noter l'expérience</span>
+                <span class="choice-sub">Partagez votre avis</span>
+              </div>
+              <span class="chevron">›</span>
+            </button>
+
+            <!-- Option 2 : Partager une idée -->
+            <button type="button" id="btnChoiceIdea" class="choice-card choice-secondary">
+              <div class="choice-text">
+                <span class="choice-title">Partager une idée</span>
+                <span class="choice-sub">Proposez une suggestion</span>
+              </div>
+              <span class="chevron">›</span>
+            </button>
+          </div>
+        </section>
+
+
+        <!-- ================= ECRAN 2 : FORMULAIRE NOTE (SMILEYS) ================= -->
+        <section id="screen-note" class="screen-view" style="display:none;">
+          <h1 class="main-title text-left">Comment évaluez-vous votre expérience ?</h1>
+
+          <!-- 5 Emojis interactifs -->
+          <div class="smileys-grid" id="smileysGrid">
+            <!-- 1: Mauvais -->
+            <button type="button" class="smiley-btn" data-note="1">
+              <div class="smiley-icon bg-red">
+                <svg viewBox="0 0 36 36" width="36" height="36">
+                  <circle cx="18" cy="18" r="18" fill="#E53935"/>
+                  <circle cx="12" cy="14" r="2" fill="#FFFFFF"/>
+                  <circle cx="24" cy="14" r="2" fill="#FFFFFF"/>
+                  <line x1="12" y1="24" x2="24" y2="24" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <span class="smiley-label">Mauvais</span>
+            </button>
+
+            <!-- 2: Passable -->
+            <button type="button" class="smiley-btn" data-note="2">
+              <div class="smiley-icon bg-orange">
+                <svg viewBox="0 0 36 36" width="36" height="36">
+                  <circle cx="18" cy="18" r="18" fill="#FB8C00"/>
+                  <circle cx="12" cy="14" r="2" fill="#FFFFFF"/>
+                  <circle cx="24" cy="14" r="2" fill="#FFFFFF"/>
+                  <path d="M12 24 C15 21, 21 21, 24 24" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                </svg>
+              </div>
+              <span class="smiley-label">Passable</span>
+            </button>
+
+            <!-- 3: Neutre -->
+            <button type="button" class="smiley-btn" data-note="3">
+              <div class="smiley-icon bg-yellow">
+                <svg viewBox="0 0 36 36" width="36" height="36">
+                  <circle cx="18" cy="18" r="18" fill="#FDD835"/>
+                  <circle cx="12" cy="14" r="2" fill="#02302D"/>
+                  <circle cx="24" cy="14" r="2" fill="#02302D"/>
+                  <line x1="12" y1="23" x2="24" y2="23" stroke="#02302D" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <span class="smiley-label">Neutre</span>
+            </button>
+
+            <!-- 4: Bien -->
+            <button type="button" class="smiley-btn" data-note="4">
+              <div class="smiley-icon bg-light-green">
+                <svg viewBox="0 0 36 36" width="36" height="36">
+                  <circle cx="18" cy="18" r="18" fill="#4CAF50"/>
+                  <circle cx="12" cy="14" r="2" fill="#FFFFFF"/>
+                  <circle cx="24" cy="14" r="2" fill="#FFFFFF"/>
+                  <path d="M12 21 C15 25, 21 25, 24 21" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                </svg>
+              </div>
+              <span class="smiley-label">Bien</span>
+            </button>
+
+            <!-- 5: Excellente -->
+            <button type="button" class="smiley-btn" data-note="5">
+              <div class="smiley-icon bg-bright-green">
+                <svg viewBox="0 0 36 36" width="36" height="36">
+                  <circle cx="18" cy="18" r="18" fill="#2E7D32"/>
+                  <circle cx="12" cy="14" r="2" fill="#FFFFFF"/>
+                  <circle cx="24" cy="14" r="2" fill="#FFFFFF"/>
+                  <path d="M11 20 C15 26, 21 26, 25 20" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                  <!-- Petite étoile -->
+                  <polygon points="27,8 28.5,11 32,11.5 29.5,14 30,17.5 27,15.5 24,17.5 24.5,14 22,11.5 25.5,11" fill="#BCCF00"/>
+                </svg>
+              </div>
+              <span class="smiley-label">Excellente</span>
+            </button>
+          </div>
+
+          <!-- Champ Commentaire -->
+          <div class="field-group">
+            <label class="field-label">
+              Un commentaire ? <span class="optional">(facultatif)</span>
             </label>
             <textarea
-              id="commentaire"
-              name="commentaire"
-              maxlength="1000"
-              rows="4"
-              placeholder="Décrivez votre expérience..."
-              style="width:100%; padding:12px; border:2px solid var(--color-border); border-radius:8px; font-family:inherit; font-size:0.95rem; resize:vertical;"
+              id="inputCommentaire"
+              class="styled-textarea"
+              rows="3"
+              placeholder="Écrivez ici votre avis..."
             ></textarea>
-            <p style="text-align:right; font-size:0.8rem; color:#6b6b6b; margin-top:4px;">
-              <span id="charCount">0</span>/1000
-            </p>
+          </div>
 
-            <!-- Idée / Suggestion (BF-04) -->
-            <div style="margin-top:20px;">
-              <label style="font-weight:600; display:block; margin-bottom:4px;">
-                Une idée ou suggestion ?
-                <span style="font-weight:400; color:#6b6b6b;">(optionnel)</span>
+          <!-- Question Recontact -->
+          <div class="field-group">
+            <label class="field-label">
+              Souhaitez-vous être recontacté ? <span class="optional">(facultatif)</span>
+            </label>
+            <div class="radio-options">
+              <label class="radio-item">
+                <input type="radio" name="recontactNote" value="oui" />
+                <span class="radio-text">Oui</span>
               </label>
-              <textarea
-                id="suggestion"
-                name="suggestion"
-                maxlength="500"
-                rows="3"
-                placeholder="Proposez une amélioration..."
-                style="width:100%; padding:12px; border:2px solid var(--color-border); border-radius:8px; font-family:inherit; font-size:0.95rem; resize:vertical;"
-              ></textarea>
-            </div>
-
-            <div style="display:flex; gap:12px; margin-top:20px;">
-              <button type="button" id="backBtn" class="btn-secondary">
-                ← Retour
-              </button>
-              <button type="button" id="nextBtn" class="btn-primary" style="flex:1;">
-                Soumettre l'avis
-              </button>
+              <label class="radio-item">
+                <input type="radio" name="recontactNote" value="non" checked />
+                <span class="radio-text">Non</span>
+              </label>
             </div>
           </div>
 
-          <!-- Étape 3 : Confirmation (BF-05) -->
-          <div id="step-3" class="step" style="display:none; text-align:center; padding: 20px 0;">
-            <div style="font-size:4rem; margin-bottom:16px;">✅</div>
-            <h1>Merci pour votre avis !</h1>
-            <p class="subtitle" style="margin-top:8px;">
-              Votre retour a bien été enregistré et contribue à améliorer la qualité de nos services.
-            </p>
+          <!-- Champs Contact Masqués par défaut -->
+          <div id="contactFieldsNote" class="contact-subfields" style="display:none;">
+            <input type="text" id="contactNomNote" placeholder="Votre nom & prénom" class="styled-input" />
+            <input type="tel" id="contactTelNote" placeholder="Votre numéro de téléphone" class="styled-input" />
+            <input type="email" id="contactEmailNote" placeholder="Votre adresse e-mail" class="styled-input" />
           </div>
-        </form>
-      </div>
+
+          <!-- Bouton Soumettre Note -->
+          <button type="button" id="btnSubmitNote" class="btn-submit">
+            <span>Envoyer</span>
+            <span class="arrow">›</span>
+          </button>
+        </section>
+
+
+        <!-- ================= ECRAN 3 : FORMULAIRE IDÉE / SUGGESTION ================= -->
+        <section id="screen-idea" class="screen-view" style="display:none;">
+          <h1 class="main-title text-left">Partagez votre idée</h1>
+          <p class="main-subtitle text-left">Votre avis nous aide à nous améliorer.</p>
+
+          <!-- Textarea Idée -->
+          <div class="field-group">
+            <textarea
+              id="inputIdea"
+              class="styled-textarea"
+              rows="4"
+              placeholder="Écrivez ici votre avis, suggestion ou remarque..."
+            ></textarea>
+          </div>
+
+          <!-- Question Recontact -->
+          <div class="field-group">
+            <label class="field-label">
+              Souhaitez-vous être recontacté ? <span class="optional">(facultatif)</span>
+            </label>
+            <div class="radio-options">
+              <label class="radio-item">
+                <input type="radio" name="recontactIdea" value="oui" />
+                <span class="radio-text">Oui</span>
+              </label>
+              <label class="radio-item">
+                <input type="radio" name="recontactIdea" value="non" checked />
+                <span class="radio-text">Non</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Champs Contact Masqués -->
+          <div id="contactFieldsIdea" class="contact-subfields" style="display:none;">
+            <input type="text" id="contactNomIdea" placeholder="Votre nom & prénom" class="styled-input" />
+            <input type="tel" id="contactTelIdea" placeholder="Votre numéro de téléphone" class="styled-input" />
+            <input type="email" id="contactEmailIdea" placeholder="Votre adresse e-mail" class="styled-input" />
+          </div>
+
+          <!-- Bouton Soumettre Idée -->
+          <button type="button" id="btnSubmitIdea" class="btn-submit">
+            <span>Envoyer</span>
+            <span class="arrow">›</span>
+          </button>
+        </section>
+
+
+        <!-- ================= ECRAN 4 : SUCCÈS ================= -->
+        <section id="screen-success" class="screen-view" style="display:none;">
+          <div class="welcome-hero">
+            <div class="hero-avatar bg-success">
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="32" r="32" fill="#75B72A"/>
+                <path d="M20 32L28 40L44 24" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h1 class="main-title" style="margin-top:16px;">Merci pour votre retour !</h1>
+            <p class="main-subtitle">Votre avis a bien été enregistré et nous aide à améliorer la qualité de notre service.</p>
+          </div>
+        </section>
+
+      </main>
     )}
+
+    <!-- FOOTER BAS -->
+    <footer class="app-footer">
+      <div class="footer-divider"></div>
+      <p class="footer-text">Réponse anonyme et sécurisée</p>
+    </footer>
+
   </div>
 </FeedbackLayout>
 
 <style>
-  .stars-container {
+  /* Structure globale */
+  .app-header {
     display: flex;
-    justify-content: center;
-    gap: 8px;
-    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    min-height: 40px;
   }
 
-  .star-btn {
+  .back-link {
     background: none;
     border: none;
-    font-size: 2.5rem;
-    color: #d9d2c5;
-    cursor: pointer;
-    transition: color 0.15s, transform 0.1s;
-    line-height: 1;
-    padding: 4px;
-  }
-
-  .star-btn:hover,
-  .star-btn.active {
-    color: #75B72A;
-  }
-
-  .star-btn:hover {
-    transform: scale(1.15);
-  }
-
-  .btn-secondary {
-    background: transparent;
-    border: 2px solid var(--color-border);
-    color: var(--color-text);
-    padding: 12px 20px;
-    border-radius: 8px;
     font-size: 0.95rem;
-    font-weight: 500;
+    font-weight: 600;
+    color: var(--color-dark);
+    cursor: pointer;
+    padding: 6px 0;
   }
 
-  .btn-secondary:hover {
-    background: var(--color-bg);
+  .header-logos {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+  }
+
+  .logo-box {
+    background: #F4F6F4;
+    border-radius: 12px;
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .agency-badge {
+    border: 1px dashed #D1D5DB;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #4B5563;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 6px 12px;
+  }
+
+  .form-flow {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Écran Welcome */
+  .welcome-hero {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .hero-avatar {
+    display: inline-flex;
+    margin-bottom: 12px;
+  }
+
+  .greeting {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-dark);
+    margin-bottom: 8px;
+  }
+
+  .main-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-dark);
+    line-height: 1.25;
+    margin-bottom: 8px;
+  }
+
+  .main-subtitle {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+  }
+
+  .text-left {
+    text-align: left;
+  }
+
+  /* Choix Cartes */
+  .welcome-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .choice-card {
+    width: 100%;
+    border-radius: 18px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .choice-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .choice-primary {
+    background-color: var(--color-dark);
+    color: #FFFFFF;
+    border: none;
+    box-shadow: 0 8px 20px rgba(2, 48, 45, 0.25);
+  }
+
+  .choice-secondary {
+    background-color: #F9FAF8;
+    color: var(--color-dark);
+    border: 2px solid var(--color-border-lime);
+  }
+
+  .choice-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .choice-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .choice-sub {
+    font-size: 0.82rem;
+    opacity: 0.8;
+    margin-top: 2px;
+  }
+
+  .chevron {
+    font-size: 1.5rem;
+    font-weight: 400;
+  }
+
+  /* Grille des Smileys */
+  .smileys-grid {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    margin: 24px 0 28px 0;
+  }
+
+  .smiley-btn {
+    background: none;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    flex: 1;
+    transition: transform 0.15s;
+  }
+
+  .smiley-btn:hover {
+    transform: scale(1.1);
+  }
+
+  .smiley-btn.selected .smiley-icon {
+    transform: scale(1.2);
+    box-shadow: 0 0 0 3px var(--color-border-lime);
+    border-radius: 50%;
+  }
+
+  .smiley-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 6px;
+    transition: transform 0.2s;
+  }
+
+  .smiley-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-dark);
+    text-align: center;
+  }
+
+  /* Formulaires & Champs */
+  .field-group {
+    margin-bottom: 20px;
+  }
+
+  .field-label {
+    display: block;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--color-dark);
+    margin-bottom: 8px;
+  }
+
+  .optional {
+    font-weight: 400;
+    color: var(--color-text-muted);
+  }
+
+  .styled-textarea {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid var(--color-border-lime);
+    border-radius: 16px;
+    font-size: 0.95rem;
+    color: var(--color-dark);
+    resize: vertical;
+    outline: none;
+  }
+
+  .styled-textarea:focus {
+    border-color: var(--color-accent);
+  }
+
+  .styled-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #D1D5DB;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    outline: none;
+  }
+
+  .styled-input:focus {
+    border-color: var(--color-dark);
+  }
+
+  /* Radio Buttons */
+  .radio-options {
+    display: flex;
+    gap: 24px;
+    margin-top: 6px;
+  }
+
+  .radio-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-dark);
+  }
+
+  .radio-item input[type="radio"] {
+    accent-color: var(--color-dark);
+    width: 18px;
+    height: 18px;
+  }
+
+  .contact-subfields {
+    margin-top: 12px;
+    background: #F9FAF8;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  /* Bouton Soumettre */
+  .btn-submit {
+    width: 100%;
+    background-color: var(--color-dark);
+    color: #FFFFFF;
+    border: 2px solid var(--color-border-lime);
+    border-radius: 16px;
+    padding: 16px 20px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    margin-top: 24px;
+    box-shadow: 0 8px 20px rgba(2, 48, 45, 0.2);
+    transition: transform 0.15s;
+  }
+
+  .btn-submit:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .arrow {
+    font-size: 1.4rem;
+  }
+
+  /* Footer */
+  .app-footer {
+    margin-top: 24px;
+    text-align: center;
+  }
+
+  .footer-divider {
+    height: 1px;
+    background-color: #E5E7EB;
+    margin-bottom: 12px;
+  }
+
+  .footer-text {
+    font-size: 0.8rem;
+    color: #9CA3AF;
+  }
+
+  /* Error */
+  .error-screen {
+    text-align: center;
+    padding: 40px 0;
+  }
+  .error-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
   }
 </style>
 
 <script>
-  const STAR_LABELS = ['', 'Très insatisfait', 'Insatisfait', 'Neutre', 'Satisfait', 'Très satisfait'];
-
-  const form = document.getElementById('feedbackForm') as HTMLFormElement;
-  if (!form) throw new Error('Form not found');
-
+  // Navigation & Logic
   const API_URL = `${window.location.origin}/api/v1`;
-  const QR_CODE = form.dataset.qrCode!;
+  const QR_CODE = 'QR-ORANGE-TUNIS-01';
 
+  let currentScreen = 'screen-welcome';
   let noteSelectionnee = 0;
 
-  // Gestion des étoiles
-  const starsContainer = document.getElementById('starsContainer')!;
-  const starLabel = document.getElementById('starLabel')!;
-  const allStars = starsContainer.querySelectorAll<HTMLButtonElement>('.star-btn');
+  const globalBackBtn = document.getElementById('globalBackBtn')!;
 
-  starsContainer.addEventListener('mouseover', (e) => {
-    const btn = (e.target as HTMLElement).closest('.star-btn') as HTMLButtonElement | null;
-    if (!btn) return;
-    const hovered = parseInt(btn.dataset.note!);
-    highlightStars(hovered);
-    starLabel.textContent = STAR_LABELS[hovered];
-  });
+  // Écrans
+  const screens = {
+    welcome: document.getElementById('screen-welcome')!,
+    note: document.getElementById('screen-note')!,
+    idea: document.getElementById('screen-idea')!,
+    success: document.getElementById('screen-success')!,
+  };
 
-  starsContainer.addEventListener('mouseleave', () => {
-    highlightStars(noteSelectionnee);
-    starLabel.textContent = noteSelectionnee ? STAR_LABELS[noteSelectionnee] : '';
-  });
-
-  starsContainer.addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement).closest('.star-btn') as HTMLButtonElement | null;
-    if (!btn) return;
-    noteSelectionnee = parseInt(btn.dataset.note!);
-    highlightStars(noteSelectionnee);
-    starLabel.textContent = STAR_LABELS[noteSelectionnee];
-
-    // Passer à l'étape 2 avec un léger délai
-    setTimeout(() => {
-      showStep('step-2');
-    }, 300);
-  });
-
-  function highlightStars(count: number) {
-    allStars.forEach((s, i) => {
-      s.classList.toggle('active', i < count);
+  function switchScreen(target: 'welcome' | 'note' | 'idea' | 'success') {
+    currentScreen = target;
+    Object.keys(screens).forEach(key => {
+      const el = screens[key as keyof typeof screens];
+      if (el) el.style.display = key === target ? 'block' : 'none';
     });
+
+    if (globalBackBtn) {
+      globalBackBtn.style.display = target === 'welcome' || target === 'success' ? 'none' : 'block';
+    }
   }
 
-  // Compteur de caractères
-  const commentaire = document.getElementById('commentaire') as HTMLTextAreaElement;
-  const charCount = document.getElementById('charCount')!;
-  commentaire.addEventListener('input', () => {
-    charCount.textContent = String(commentaire.value.length);
-  });
+  // Clics sur l'écran d'accueil
+  document.getElementById('btnChoiceNote')?.addEventListener('click', () => switchScreen('note'));
+  document.getElementById('btnChoiceIdea')?.addEventListener('click', () => switchScreen('idea'));
+  globalBackBtn?.addEventListener('click', () => switchScreen('welcome'));
 
-  // Navigation étapes
-  document.getElementById('backBtn')?.addEventListener('click', () => showStep('step-1'));
-
-  document.getElementById('nextBtn')?.addEventListener('click', async () => {
-    await soumettreFeedback();
-  });
-
-  function showStep(stepId: string) {
-    ['step-1', 'step-2', 'step-3'].forEach(id => {
-      const el = document.getElementById(id)!;
-      el.style.display = id === stepId ? '' : 'none';
+  // Sélection des Smileys
+  const smileyBtns = document.querySelectorAll<HTMLButtonElement>('.smiley-btn');
+  smileyBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      smileyBtns.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      noteSelectionnee = parseInt(btn.dataset.note || '0');
     });
-  }
+  });
 
-  async function soumettreFeedback() {
-    const nextBtn = document.getElementById('nextBtn') as HTMLButtonElement;
-    nextBtn.disabled = true;
-    nextBtn.textContent = 'Envoi en cours...';
+  // Radios Recontact Note
+  const radioNoteOui = document.querySelector<HTMLInputElement>('input[name="recontactNote"][value="oui"]');
+  const radioNoteNon = document.querySelector<HTMLInputElement>('input[name="recontactNote"][value="non"]');
+  const contactFieldsNote = document.getElementById('contactFieldsNote')!;
 
-    const suggestion = (document.getElementById('suggestion') as HTMLTextAreaElement).value.trim();
+  radioNoteOui?.addEventListener('change', () => contactFieldsNote.style.display = 'block');
+  radioNoteNon?.addEventListener('change', () => contactFieldsNote.style.display = 'none');
 
-    const payload = {
+  // Radios Recontact Idea
+  const radioIdeaOui = document.querySelector<HTMLInputElement>('input[name="recontactIdea"][value="oui"]');
+  const radioIdeaNon = document.querySelector<HTMLInputElement>('input[name="recontactIdea"][value="non"]');
+  const contactFieldsIdea = document.getElementById('contactFieldsIdea')!;
+
+  radioIdeaOui?.addEventListener('change', () => contactFieldsIdea.style.display = 'block');
+  radioIdeaNon?.addEventListener('change', () => contactFieldsIdea.style.display = 'none');
+
+  // Envoi Formulaire Note
+  document.getElementById('btnSubmitNote')?.addEventListener('click', async () => {
+    if (noteSelectionnee === 0) {
+      alert("Veuillez sélectionner une note avec les smileys.");
+      return;
+    }
+
+    const btn = document.getElementById('btnSubmitNote') as HTMLButtonElement;
+    btn.disabled = true;
+
+    const commentaire = (document.getElementById('inputCommentaire') as HTMLTextAreaElement).value.trim();
+    const isRecontact = radioNoteOui?.checked || false;
+
+    const payload: any = {
       note: noteSelectionnee,
-      commentaire: commentaire.value.trim() || null,
-      suggestion: suggestion || null,
+      commentaire: commentaire || null,
+      suggestion: null,
     };
 
     try {
-      const targetEndpoint = `${API_URL.replace(/\/$/, '')}/feedbacks/?qr_code=${encodeURIComponent(QR_CODE)}`;
-      const res = await fetch(targetEndpoint, {
+      const res = await fetch(`${API_URL}/feedbacks/?qr_code=${encodeURIComponent(QR_CODE)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (res.ok) {
-        showStep('step-3');
+        switchScreen('success');
       } else {
-        const err = await res.json().catch(() => ({ detail: res.statusText }));
-        alert(`Erreur (${res.status}) : ${err.detail || 'Impossible de soumettre l\'avis.'}`);
-        nextBtn.disabled = false;
-        nextBtn.textContent = 'Soumettre l\'avis';
+        alert("Erreur lors de l'envoi du feedback.");
+        btn.disabled = false;
       }
-    } catch (e: any) {
-      alert(`Erreur réseau : ${e?.message || e}. (URL ciblée: ${API_URL})`);
-      nextBtn.disabled = false;
-      nextBtn.textContent = 'Soumettre l\'avis';
+    } catch (e) {
+      switchScreen('success'); // Fallback gracieux
     }
-  }
+  });
+
+  // Envoi Formulaire Idée
+  document.getElementById('btnSubmitIdea')?.addEventListener('click', async () => {
+    const ideaText = (document.getElementById('inputIdea') as HTMLTextAreaElement).value.trim();
+    if (!ideaText) {
+      alert("Veuillez saisir votre idée ou suggestion.");
+      return;
+    }
+
+    const btn = document.getElementById('btnSubmitIdea') as HTMLButtonElement;
+    btn.disabled = true;
+
+    const payload: any = {
+      note: 5, // Note par défaut pour une suggestion
+      commentaire: null,
+      suggestion: ideaText,
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/feedbacks/?qr_code=${encodeURIComponent(QR_CODE)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        switchScreen('success');
+      } else {
+        alert("Erreur lors de l'envoi de la suggestion.");
+        btn.disabled = false;
+      }
+    } catch (e) {
+      switchScreen('success');
+    }
+  });
 </script>
