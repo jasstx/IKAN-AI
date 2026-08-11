@@ -10,15 +10,18 @@ from app.core.config import settings
 db_url = settings.DATABASE_URL
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
-if "render.com" in db_url and "sslmode" not in db_url:
+
+connect_args = {}
+if ("render.com" in db_url or "dpg-" in db_url) and "sslmode" not in db_url:
     separator = "&" if "?" in db_url else "?"
     db_url = f"{db_url}{separator}sslmode=require"
 
 engine = create_engine(
     db_url,
     pool_pre_ping=True,           # Vérification de la connexion avant utilisation
-    pool_size=10,                  # Taille du pool de connexions
-    max_overflow=20,               # Connexions supplémentaires autorisées
+    pool_size=5,                   # Taille du pool de connexions
+    max_overflow=10,              # Connexions supplémentaires autorisées
+    connect_args=connect_args,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -34,5 +37,8 @@ def get_db():
     db = SessionLocal()
     try:
         yield db
+    except Exception as e:
+        db.rollback()
+        raise e
     finally:
         db.close()
