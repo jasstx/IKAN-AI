@@ -82,21 +82,31 @@ def validate_qr_code(
     Valide un code QR et retourne les infos de l'agence.
     Endpoint public — appelé par la page Astro client.
     """
-    qr = db.query(QRCode).filter(
-        QRCode.code == code,
-        QRCode.actif == True,
-    ).first()
+    try:
+        qr = db.query(QRCode).filter(
+            QRCode.code == code,
+            QRCode.actif == True,
+        ).first()
 
-    if not qr:
-        raise HTTPException(status_code=404, detail="QR Code invalide ou inactif")
+        if not qr:
+            raise HTTPException(status_code=404, detail="QR Code invalide ou inactif")
 
-    return {
-        "qr_code_id": str(qr.id),
-        "agence_id": str(qr.agence_id),
-        "agence_nom": qr.agence.nom,
-        "ville": qr.agence.ville,
-        "label": qr.label,
-    }
+        agence_nom = qr.agence.nom if (qr and qr.agence) else "Agence"
+        ville = qr.agence.ville if (qr and qr.agence) else None
+
+        return {
+            "qr_code_id": str(qr.id),
+            "agence_id": str(qr.agence_id),
+            "agence_nom": agence_nom,
+            "ville": ville,
+            "label": qr.label,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erreur validation QR code: {str(e)}")
 
 
 @router.delete("/{qr_id}", status_code=status.HTTP_204_NO_CONTENT)

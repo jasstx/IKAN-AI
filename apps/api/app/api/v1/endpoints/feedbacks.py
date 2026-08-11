@@ -78,8 +78,7 @@ def submit_feedback(
 
         res_item = FeedbackResponse.model_validate(feedback)
         res_item.agence_id = qr.agence_id
-        if qr.agence:
-            res_item.agence_nom = qr.agence.nom
+        res_item.agence_nom = qr.agence.nom if (qr and qr.agence) else "Agence"
 
         return res_item
     except HTTPException:
