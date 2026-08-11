@@ -41,41 +41,54 @@ def submit_feedback(
     if not qr:
         raise HTTPException(status_code=404, detail="QR Code invalide")
 
-    # Créer le feedback
-    feedback = Feedback(
-        qr_code_id=qr.id,
-        note=data.note,
-        commentaire=data.commentaire,
-    )
-    db.add(feedback)
-    db.flush()  # Obtenir l'ID sans commit
-
-    # Ajouter la suggestion si fournie (BF-04)
-    if data.suggestion:
-        suggestion = Suggestion(
-            feedback_id=feedback.id,
-            contenu=data.suggestion,
+    try:
+        # Créer le feedback
+        feedback = Feedback(
+            qr_code_id=qr.id,
+            note=data.note,
+            commentaire=data.commentaire,
         )
-        db.add(suggestion)
+        db.add(feedback)
+        db.flush()  # Obtenir l'ID sans commit
 
-    # Ajouter la demande de contact si fournie
-    if data.souhaite_etre_rappele or data.contact_email:
-        contact = DemandeContact(
-            feedback_id=feedback.id,
-            nom=data.contact_nom,
-            telephone=data.contact_telephone,
-            email=data.contact_email,
-            souhaite_etre_rappele=data.souhaite_etre_rappele,
-        )
-        db.add(contact)
+        # Ajouter la suggestion si fournie (BF-04)
+        if data.suggestion:
+            suggestion = Suggestion(
+                feedback_id=feedback.id,
+                contenu=data.suggestion,
+            )
+            db.add(suggestion)
 
-    db.commit()
-    db.refresh(feedback)
+        # Ajouter la demande de contact si fournie
+        if data.souhaite_etre_rappele or data.contact_email:
+            contact = DemandeContact(
+                feedback_id=feedback.id,
+                nom=data.contact_nom,
+                telephone=data.contact_telephone,
+                email=data.contact_email,
+                souhaite_etre_rappele=data.souhaite_etre_rappele,
+            )
+            db.add(contact)
 
-    # Analyse IA en arrière-plan (BF-06, BF-17)
-    background_tasks.add_task(analyser_feedback, feedback.id, db)
+        db.commit()
+        db.refresh(feedback)
 
-    return feedback
+        # Analyse IA en arrière-plan (BF-06, BF-17) - Ne PAS passer la session db fermée de la requête HTTP
+        background_tasks.add_task(analyser_feedback, feedback.id)
+
+        res_item = FeedbackResponse.model_validate(feedback)
+        res_item.agence_id = qr.agence_id
+        if qr.agence:
+            res_item.agence_nom = qr.agence.nom
+
+        return res_item
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erreur enregistrement feedback: {str(e)}")
 
 
 @router.get("/", response_model=List[FeedbackResponse])
