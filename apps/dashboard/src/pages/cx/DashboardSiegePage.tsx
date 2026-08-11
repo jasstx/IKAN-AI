@@ -128,25 +128,79 @@ export default function DashboardSiegePage() {
         .tab-btn:not(.active):hover { background: #f8fafc; }
       `}</style>
 
-      {/* ── Header ─────────────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>📊 Vue Siège</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', marginTop: '4px' }}>
-            Pilotage global de l'expérience client — {data.periode}
-          </p>
+      {/* ── Header Carte Vue Siège (Conforme à l'image UI) ── */}
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        padding: '24px 28px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+        border: '1px solid #E5E7EB',
+        marginBottom: '24px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '18px' }}>
+          {/* Badge Icône Vert Clair */}
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '14px',
+            background: '#E8F5E9',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 20V10M12 20V4M6 20V14" stroke="#02302D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+
+          <div>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#02302D', margin: 0 }}>
+              Vue siège
+            </h1>
+            <p style={{ color: '#71717A', fontSize: '0.88rem', marginTop: '2px', margin: 0 }}>
+              Pilotage global de l'expérience client — {jours} derniers jours
+            </p>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+
+        {/* Sélecteur de période stylisé en pleine largeur */}
+        <div style={{ position: 'relative', width: '100%' }}>
           <select
             value={jours}
             onChange={(e) => setJours(Number(e.target.value))}
-            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontFamily: 'inherit', fontSize: '0.88rem', cursor: 'pointer' }}
+            style={{
+              width: '100%',
+              padding: '14px 18px',
+              borderRadius: '12px',
+              border: '1px solid #E4E4E7',
+              background: '#FFFFFF',
+              fontFamily: 'inherit',
+              fontSize: '0.95rem',
+              fontWeight: 500,
+              color: '#18181B',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
           >
             <option value={7}>7 derniers jours</option>
             <option value={30}>30 derniers jours</option>
             <option value={90}>90 derniers jours</option>
             <option value={365}>12 derniers mois</option>
           </select>
+          <div style={{
+            position: 'absolute',
+            right: '18px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            pointerEvents: 'none',
+            color: '#52525B',
+            fontSize: '0.75rem',
+          }}>
+            ▼
+          </div>
         </div>
       </div>
 
