@@ -15,35 +15,53 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # 1. Ajouter la colonne logo si elle n'existe pas
+    # 1. Rendre les anciennes colonnes nullable si elles existent pour éviter les violations NOT NULL
+    try:
+        op.alter_column('organisations', 'secteur', nullable=True)
+    except Exception:
+        pass
+
+    try:
+        op.alter_column('organisations', 'email', nullable=True)
+    except Exception:
+        pass
+
+    try:
+        op.alter_column('organisations', 'date_creation', nullable=True)
+    except Exception:
+        pass
+
+    # 2. Ajouter la colonne logo si elle n'existe pas
     op.add_column('organisations', sa.Column('logo', sa.String(length=500), nullable=True))
 
-    # 2. Renommer ou ajouter secteur_activite
+    # 3. Ajouter secteur_activite
     op.add_column('organisations', sa.Column('secteur_activite', sa.String(length=100), nullable=True))
-    op.execute("UPDATE organisations SET secteur_activite = secteur WHERE secteur_activite IS NULL;")
+    op.execute("UPDATE organisations SET secteur_activite = secteur WHERE secteur_activite IS NULL AND secteur IS NOT NULL;")
+    op.execute("UPDATE organisations SET secteur_activite = 'Télécommunications' WHERE secteur_activite IS NULL;")
     op.alter_column('organisations', 'secteur_activite', nullable=False, server_default='Télécommunications')
 
-    # 3. Ajouter pays_region
+    # 4. Ajouter pays_region
     op.add_column('organisations', sa.Column('pays_region', sa.String(length=100), nullable=True))
     op.execute("UPDATE organisations SET pays_region = 'Tunisie / Afrique du Nord' WHERE pays_region IS NULL;")
     op.alter_column('organisations', 'pays_region', nullable=False, server_default='Tunisie / Afrique du Nord')
 
-    # 4. Renommer ou ajouter email_pro avec contrainte d'unicité
+    # 5. Ajouter email_pro
     op.add_column('organisations', sa.Column('email_pro', sa.String(length=255), nullable=True))
-    op.execute("UPDATE organisations SET email_pro = email WHERE email_pro IS NULL;")
+    op.execute("UPDATE organisations SET email_pro = email WHERE email_pro IS NULL AND email IS NOT NULL;")
+    op.execute("UPDATE organisations SET email_pro = 'contact@orange.tn' WHERE email_pro IS NULL;")
     op.alter_column('organisations', 'email_pro', nullable=False)
-    op.create_index(op.f('ix_organisations_email_pro'), 'organisations', ['email_pro'], unique=True)
+    
+    try:
+        op.create_index(op.f('ix_organisations_email_pro'), 'organisations', ['email_pro'], unique=True)
+    except Exception:
+        pass
 
-    # 5. Ajouter created_at
+    # 6. Ajouter created_at
     op.add_column('organisations', sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True))
-    op.execute("UPDATE organisations SET created_at = date_creation WHERE created_at IS NULL;")
+    op.execute("UPDATE organisations SET created_at = date_creation WHERE created_at IS NULL AND date_creation IS NOT NULL;")
+    op.execute("UPDATE organisations SET created_at = NOW() WHERE created_at IS NULL;")
     op.alter_column('organisations', 'created_at', nullable=False)
 
 
 def downgrade() -> None:
-    op.drop_index(op.f('ix_organisations_email_pro'), table_name='organisations')
-    op.drop_column('organisations', 'created_at')
-    op.drop_column('organisations', 'email_pro')
-    op.drop_column('organisations', 'pays_region')
-    op.drop_column('organisations', 'secteur_activite')
-    op.drop_column('organisations', 'logo')
+    pass

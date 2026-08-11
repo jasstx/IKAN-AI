@@ -27,18 +27,17 @@ class Organisation(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    # Propriétés de rétro-compatibilité
-    @property
-    def secteur(self) -> str:
-        return self.secteur_activite
+    # Colonnes héritées (legacy) pour compatibilité
+    secteur: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    date_creation: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, server_default=func.now())
 
-    @property
-    def email(self) -> str:
-        return self.email_pro
-
-    @property
-    def date_creation(self) -> datetime:
-        return self.created_at
+    def __init__(self, **kwargs):
+        if "email_pro" in kwargs and "email" not in kwargs:
+            kwargs["email"] = kwargs["email_pro"]
+        if "secteur_activite" in kwargs and "secteur" not in kwargs:
+            kwargs["secteur"] = kwargs["secteur_activite"]
+        super().__init__(**kwargs)
 
     # Relations
     agences: Mapped[list["Agence"]] = relationship("Agence", back_populates="organisation")
