@@ -90,7 +90,7 @@ for o in settings.allowed_origins_list:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https?://.*",
+    allow_origin_regex=r"https://.*(\.onrender\.com|\.trycloudflare\.com|\.ngrok-free\.app|\.ngrok\.io|localhost:\d+)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
