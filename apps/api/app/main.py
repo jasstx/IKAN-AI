@@ -48,10 +48,24 @@ def on_startup():
     except Exception as e:
         print(f"[STARTUP DB MIGRATION LOG] {e}")
 
-# Configuration CORS
+# Configuration CORS (Support Render + Localhost)
+origins = [
+    "http://localhost:4321",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:4321",
+    "http://127.0.0.1:5173",
+    "https://ikanai-client.onrender.com",
+    "https://ikanai-dashboard.onrender.com",
+]
+for o in settings.allowed_origins_list:
+    if o and o not in origins:
+        origins.append(o)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins_list,
+    allow_origins=origins,
+    allow_origin_regex=r"https://.*\.onrender\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
