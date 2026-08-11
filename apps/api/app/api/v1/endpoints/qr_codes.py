@@ -22,6 +22,11 @@ router = APIRouter()
 CLIENT_BASE_URL = settings.PUBLIC_CLIENT_URL.rstrip("/")
 
 
+@router.get("/ping")
+def ping_qr_codes():
+    return {"status": "pong"}
+
+
 class QRCodeResponse(BaseModel):
     id: uuid.UUID
     agence_id: uuid.UUID
