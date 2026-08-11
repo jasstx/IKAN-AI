@@ -6,6 +6,7 @@ export default function AdminOrgsPage() {
   const [orgs, setOrgs] = useState<Organisation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingOrg, setEditingOrg] = useState<Organisation | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [form, setForm] = useState({
     nom: '',
@@ -15,14 +16,38 @@ export default function AdminOrgsPage() {
     email_pro: '',
   });
 
-  useEffect(() => {
+  const loadOrgs = () => {
     organisationsApi.list().then((r) => {
       setOrgs(r.data);
       setLoading(false);
     }).catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadOrgs();
   }, []);
 
-  const create = async (e: React.FormEvent) => {
+  const openCreate = () => {
+    setEditingOrg(null);
+    setForm({ nom: '', logo: '', secteur_activite: '', pays_region: '', email_pro: '' });
+    setErrorMsg('');
+    setShowForm(true);
+  };
+
+  const openEdit = (org: Organisation) => {
+    setEditingOrg(org);
+    setForm({
+      nom: org.nom || '',
+      logo: org.logo || '',
+      secteur_activite: org.secteur_activite || org.secteur || '',
+      pays_region: org.pays_region || '',
+      email_pro: org.email_pro || org.email || '',
+    });
+    setErrorMsg('');
+    setShowForm(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     try {
@@ -33,27 +58,37 @@ export default function AdminOrgsPage() {
         pays_region: form.pays_region,
         email_pro: form.email_pro,
       };
-      await organisationsApi.create(payload);
-      const r = await organisationsApi.list();
-      setOrgs(r.data);
+
+      if (editingOrg) {
+        await organisationsApi.update(editingOrg.id, payload);
+      } else {
+        await organisationsApi.create(payload);
+      }
+
+      loadOrgs();
       setShowForm(false);
+      setEditingOrg(null);
       setForm({ nom: '', logo: '', secteur_activite: '', pays_region: '', email_pro: '' });
     } catch (err: any) {
-      console.error("Erreur API création organisation:", err?.response?.data);
+      console.error("Erreur API organisation:", err?.response?.data);
       let detail = err?.response?.data?.detail;
       if (Array.isArray(detail)) {
         detail = detail.map((d: any) => `${d.loc ? d.loc.join('.') : ''}: ${d.msg}`).join(', ');
       } else if (typeof detail === 'object') {
         detail = JSON.stringify(detail);
       }
-      setErrorMsg(detail || err?.message || "Erreur lors de la création de l'organisation.");
+      setErrorMsg(detail || err?.message || "Erreur lors de l'enregistrement de l'organisation.");
     }
   };
 
   const deleteOrg = async (id: string) => {
     if (!confirm('Supprimer cette organisation ?')) return;
-    await organisationsApi.delete(id);
-    setOrgs((prev) => prev.filter((o) => o.id !== id));
+    try {
+      await organisationsApi.delete(id);
+      setOrgs((prev) => prev.filter((o) => o.id !== id));
+    } catch (err: any) {
+      alert(err?.response?.data?.detail || "Impossible de supprimer cette organisation.");
+    }
   };
 
   if (loading) return <div style={{ color: 'var(--color-text-muted)', padding: '32px' }}>Chargement...</div>;
@@ -101,7 +136,14 @@ export default function AdminOrgsPage() {
         </div>
 
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm) {
+              setShowForm(false);
+              setEditingOrg(null);
+            } else {
+              openCreate();
+            }
+          }}
           style={{ background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 18px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, fontSize: '0.9rem' }}
         >
           {showForm ? 'Fermer' : '+ Nouvelle organisation'}
@@ -109,8 +151,10 @@ export default function AdminOrgsPage() {
       </div>
 
       {showForm && (
-        <form onSubmit={create} style={{ background: 'white', borderRadius: 'var(--radius)', padding: '24px', boxShadow: 'var(--shadow)', marginBottom: '20px' }}>
-          <h3 style={{ marginBottom: '16px', fontSize: '1.05rem', fontWeight: 700, color: '#02302D' }}>Créer une organisation</h3>
+        <form onSubmit={handleSubmit} style={{ background: 'white', borderRadius: 'var(--radius)', padding: '24px', boxShadow: 'var(--shadow)', marginBottom: '20px' }}>
+          <h3 style={{ marginBottom: '16px', fontSize: '1.05rem', fontWeight: 700, color: '#02302D' }}>
+            {editingOrg ? `✏️ Modifier l'organisation : ${editingOrg.nom}` : "➕ Créer une organisation"}
+          </h3>
 
           {errorMsg && (
             <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '10px 14px', borderRadius: '8px', fontSize: '0.88rem', marginBottom: '16px' }}>
@@ -255,8 +299,10 @@ export default function AdminOrgsPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '18px' }}>
-            <button type="button" onClick={() => setShowForm(false)} style={{ padding: '10px 18px', border: '1.5px solid #e2e8f0', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
-            <button type="submit" style={{ padding: '10px 22px', background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>Enregistrer</button>
+            <button type="button" onClick={() => { setShowForm(false); setEditingOrg(null); }} style={{ padding: '10px 18px', border: '1.5px solid #e2e8f0', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
+            <button type="submit" style={{ padding: '10px 22px', background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+              {editingOrg ? 'Mettre à jour' : 'Enregistrer'}
+            </button>
           </div>
         </form>
       )}
@@ -294,7 +340,20 @@ export default function AdminOrgsPage() {
                   </span>
                 </td>
                 <td style={{ padding: '12px 16px' }}>
-                  <button onClick={() => deleteOrg(o.id)} style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>Supprimer</button>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => openEdit(o)}
+                      style={{ background: '#f1f5f9', color: '#0369a1', border: '1px solid #bae6fd', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}
+                    >
+                      ✏️ Modifier
+                    </button>
+                    <button
+                      onClick={() => deleteOrg(o.id)}
+                      style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}
+                    >
+                      🗑️ Supprimer
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
