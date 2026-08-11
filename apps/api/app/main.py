@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from app.core.config import settings
 from app.api.v1.router import api_router
-from app.db.session import engine, Base
+from app.db.session import engine, Base, SessionLocal
 import app.models.organisation
 import app.models.agence
 import app.models.utilisateur
@@ -30,7 +30,7 @@ app = FastAPI(
 
 @app.on_event("startup")
 def on_startup():
-    """Création automatique des tables et synchronisation des colonnes PostgreSQL."""
+    """Création automatique des tables, migration DDL et auto-seeding si la base de prod est vide."""
     Base.metadata.create_all(bind=engine)
     try:
         with engine.begin() as conn:
@@ -47,6 +47,20 @@ def on_startup():
             conn.execute(text("UPDATE organisations SET created_at = date_creation WHERE created_at IS NULL AND date_creation IS NOT NULL;"))
     except Exception as e:
         print(f"[STARTUP DB MIGRATION LOG] {e}")
+
+    # Auto-seeding si aucun QR Code n'existe en base
+    try:
+        db = SessionLocal()
+        from app.models.qr_code import QRCode
+        count = db.query(QRCode).count()
+        db.close()
+        if count == 0:
+            print("[STARTUP SEED] Aucune donnée détectée. Seeding automatique en cours...")
+            from seed import seed_database
+            seed_database()
+            print("[STARTUP SEED] Seeding automatique terminé avec succès !")
+    except Exception as e:
+        print(f"[STARTUP SEED LOG ERROR] {e}")
 
 # Configuration CORS (Support Render + Localhost)
 origins = [
