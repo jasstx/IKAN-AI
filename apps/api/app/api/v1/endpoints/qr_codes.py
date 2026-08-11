@@ -99,13 +99,43 @@ def validate_qr_code(
     Endpoint public — appelé par la page Astro client.
     """
     try:
+        from sqlalchemy import func
+        clean_code = code.strip()
+
+        # 1. Recherche par code exact ou insensible à la casse
         qr = db.query(QRCode).filter(
-            QRCode.code == code,
+            func.lower(QRCode.code) == clean_code.lower(),
             QRCode.actif == True,
         ).first()
 
+        # 2. Si non trouvé, vérifier si clean_code est l'ID d'une Agence ou d'un QRCode
         if not qr:
-            raise HTTPException(status_code=404, detail="QR Code invalide ou inactif")
+            try:
+                possible_uuid = UUID(clean_code)
+                # Vérifier si c'est un agence_id
+                agence = db.query(Agence).filter(Agence.id == possible_uuid).first()
+                if agence:
+                    # Chercher s'il existe déjà un QR code pour cette agence
+                    qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
+                    if not qr:
+                        clean_name = agence.nom.upper().replace(" ", "-")[:12]
+                        code_str = f"QR-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
+                        qr = QRCode(
+                            id=uuid.uuid4(),
+                            agence_id=agence.id,
+                            code=code_str,
+                            url=f"{CLIENT_BASE_URL}/feedback/{code_str}",
+                            label=f"Borne Accueil - {agence.nom}",
+                            actif=True
+                        )
+                        db.add(qr)
+                        db.commit()
+                        db.refresh(qr)
+            except ValueError:
+                pass
+
+        if not qr:
+            raise HTTPException(status_code=404, detail=f"QR Code ou Agence '{clean_code}' introuvable ou inactif")
 
         agence_nom = qr.agence.nom if (qr and qr.agence) else "Agence"
         ville = qr.agence.ville if (qr and qr.agence) else None

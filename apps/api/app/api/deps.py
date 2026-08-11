@@ -119,10 +119,10 @@ def get_cx_manager(
 def get_cx_or_agency_manager(
     current_user: Utilisateur = Depends(get_current_active_user),
 ) -> Utilisateur:
-    """Exige le rôle CX Manager ou Agency Manager (Admin exclu de la consultation des feedbacks/stats)."""
-    if current_user.role not in (UserRole.CX_MANAGER, UserRole.AGENCY_MANAGER):
+    """Exige le rôle CX Manager, Agency Manager ou Admin."""
+    if current_user.role not in (UserRole.CX_MANAGER, UserRole.AGENCY_MANAGER, UserRole.ADMIN):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Accès refusé. L'Administrateur ne consulte ni les feedbacks ni les statistiques de satisfaction.",
+            detail="Accès refusé.",
         )
     return current_user

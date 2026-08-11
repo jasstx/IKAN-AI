@@ -33,13 +33,40 @@ def submit_feedback(
     Déclenche l'analyse IA en tâche de fond.
     BF-01, BF-02, BF-03, BF-04, BF-05
     """
-    # Valider le QR code
+    # Valider le QR code (case-insensitive + fallback agence_id)
+    from sqlalchemy import func
+    clean_code = qr_code.strip()
     qr = db.query(QRCode).filter(
-        QRCode.code == qr_code,
+        func.lower(QRCode.code) == clean_code.lower(),
         QRCode.actif == True,
     ).first()
+
     if not qr:
-        raise HTTPException(status_code=404, detail="QR Code invalide")
+        try:
+            possible_uuid = UUID(clean_code)
+            agence = db.query(Agence).filter(Agence.id == possible_uuid).first()
+            if agence:
+                qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
+                if not qr:
+                    base_url = settings.PUBLIC_CLIENT_URL.rstrip("/")
+                    clean_name = agence.nom.upper().replace(" ", "-")[:12]
+                    code_str = f"QR-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
+                    qr = QRCode(
+                        id=uuid.uuid4(),
+                        agence_id=agence.id,
+                        code=code_str,
+                        url=f"{base_url}/feedback/{code_str}",
+                        label=f"Borne Accueil - {agence.nom}",
+                        actif=True
+                    )
+                    db.add(qr)
+                    db.commit()
+                    db.refresh(qr)
+        except ValueError:
+            pass
+
+    if not qr:
+        raise HTTPException(status_code=404, detail=f"QR Code ou Agence '{clean_code}' invalide ou inactif")
 
     try:
         # Créer le feedback
@@ -117,12 +144,13 @@ def list_feedbacks(
     if current_user.role == UserRole.AGENCY_MANAGER:
         # Ne voit que les feedbacks de son agence
         query = query.filter(QRCode.agence_id == current_user.agence_id)
-    elif current_user.role == UserRole.CX_MANAGER:
-        # Voit tous les feedbacks des agences de son organisation
+    elif current_user.role in (UserRole.CX_MANAGER, UserRole.ADMIN):
+        # Voit les feedbacks des agences de son organisation (ou tous si Admin sans org)
         from app.models.agence import Agence
-        query = query.join(Agence, QRCode.agence_id == Agence.id).filter(
-            Agence.organisation_id == current_user.organisation_id
-        )
+        if current_user.organisation_id:
+            query = query.join(Agence, QRCode.agence_id == Agence.id).filter(
+                Agence.organisation_id == current_user.organisation_id
+            )
         if agence_id:
             query = query.filter(QRCode.agence_id == agence_id)
 
