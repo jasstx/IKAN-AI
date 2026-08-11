@@ -6,6 +6,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.api.v1.router import api_router
+from app.db.session import engine, Base
+import app.models.organisation
+import app.models.agence
+import app.models.utilisateur
+import app.models.qr_code
+import app.models.feedback
+import app.models.analyse_ia
+import app.models.suggestion
+import app.models.demande_contact
+import app.models.historique_action
+import app.models.system_settings
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -15,6 +26,11 @@ app = FastAPI(
     docs_url=f"{settings.API_V1_STR}/docs",
     redoc_url=f"{settings.API_V1_STR}/redoc",
 )
+
+@app.on_event("startup")
+def on_startup():
+    """Création automatique des tables au démarrage de l'application."""
+    Base.metadata.create_all(bind=engine)
 
 # Configuration CORS
 app.add_middleware(
