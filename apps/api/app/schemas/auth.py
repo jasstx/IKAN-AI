@@ -8,7 +8,8 @@ import uuid
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str | None = None
+    mot_de_passe: str | None = None
 
 
 class UserPublic(BaseModel):

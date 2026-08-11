@@ -20,8 +20,8 @@ from app.schemas.auth import LoginRequest, TokenResponse, UserPublic
 
 router = APIRouter()
 
-COOKIE_SECURE = settings.APP_ENV == "production"
-COOKIE_SAMESITE = "lax"
+COOKIE_SECURE = True
+COOKIE_SAMESITE = "none"
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -34,12 +34,19 @@ def login(
     Authentification par email/mot de passe.
     Retourne les tokens dans des cookies HTTP-only (sécurité CSRF réduite).
     """
+    pwd = credentials.password or credentials.mot_de_passe
+    if not pwd:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Le mot de passe est requis",
+        )
+
     user = db.query(Utilisateur).filter(
         Utilisateur.email == credentials.email,
         Utilisateur.active == True,
     ).first()
 
-    if not user or not verify_password(credentials.password, user.mot_de_passe_hash):
+    if not user or not verify_password(pwd, user.mot_de_passe_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou mot de passe incorrect",
