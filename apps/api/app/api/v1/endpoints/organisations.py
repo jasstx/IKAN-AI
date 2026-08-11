@@ -39,7 +39,11 @@ def create_organisation(
             detail=f"Une organisation avec l'email professionnel '{data.email_pro}' existe déjà."
         )
 
-    org = Organisation(**data.model_dump())
+    org_data = data.model_dump()
+    org_data["email"] = data.email_pro
+    org_data["secteur"] = data.secteur_activite
+
+    org = Organisation(**org_data)
     db.add(org)
     db.commit()
     db.refresh(org)

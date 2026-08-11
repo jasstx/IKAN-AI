@@ -39,8 +39,14 @@ export default function AdminOrgsPage() {
       setShowForm(false);
       setForm({ nom: '', logo: '', secteur_activite: '', pays_region: '', email_pro: '' });
     } catch (err: any) {
-      const detail = err?.response?.data?.detail || "Erreur lors de la création de l'organisation.";
-      setErrorMsg(detail);
+      console.error("Erreur API création organisation:", err?.response?.data);
+      let detail = err?.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        detail = detail.map((d: any) => `${d.loc ? d.loc.join('.') : ''}: ${d.msg}`).join(', ');
+      } else if (typeof detail === 'object') {
+        detail = JSON.stringify(detail);
+      }
+      setErrorMsg(detail || err?.message || "Erreur lors de la création de l'organisation.");
     }
   };
 
