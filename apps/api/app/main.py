@@ -112,3 +112,16 @@ def root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+
+@app.get("/debug-db")
+def debug_db():
+    try:
+        from app.db.session import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            res = conn.execute(text("SELECT 1")).fetchone()
+            return {"status": "connected", "result": res[0]}
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
