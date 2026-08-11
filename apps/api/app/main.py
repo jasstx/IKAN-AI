@@ -1,7 +1,8 @@
 """
 Point d'entrée principal de l'API IKAN AI.
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
@@ -27,6 +28,16 @@ app = FastAPI(
     docs_url=f"{settings.API_V1_STR}/docs",
     redoc_url=f"{settings.API_V1_STR}/redoc",
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    err_trace = traceback.format_exc()
+    print(f"[GLOBAL EXCEPTION] {err_trace}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Erreur serveur interne: {str(exc)}", "trace": err_trace[-400:]}
+    )
 
 @app.on_event("startup")
 def on_startup():
