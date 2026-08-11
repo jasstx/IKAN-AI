@@ -21,7 +21,10 @@ def list_organisations(
     _: Utilisateur = Depends(get_admin_user),
 ):
     """Liste toutes les organisations (Réservé au rôle Admin)."""
-    return db.query(Organisation).order_by(Organisation.created_at.desc()).all()
+    try:
+        return db.query(Organisation).order_by(Organisation.created_at.desc()).all()
+    except Exception:
+        return db.query(Organisation).all()
 
 
 @router.post("/", response_model=OrganisationRead, status_code=status.HTTP_201_CREATED)
@@ -32,7 +35,9 @@ def create_organisation(
 ):
     """Crée une nouvelle organisation (Réservé au rôle Admin)."""
     # Vérification de l'unicité de l'email professionnel
-    existing = db.query(Organisation).filter(Organisation.email_pro == data.email_pro).first()
+    existing = db.query(Organisation).filter(
+        (Organisation.email_pro == data.email_pro) | (Organisation.email == data.email_pro)
+    ).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -78,7 +83,7 @@ def update_organisation(
     # Si l'email pro est modifié, vérifier qu'il reste unique
     if data.email_pro and data.email_pro != org.email_pro:
         dup = db.query(Organisation).filter(
-            Organisation.email_pro == data.email_pro,
+            (Organisation.email_pro == data.email_pro) | (Organisation.email == data.email_pro),
             Organisation.id != org_id
         ).first()
         if dup:
@@ -87,7 +92,13 @@ def update_organisation(
                 detail=f"L'email professionnel '{data.email_pro}' est déjà utilisé par une autre organisation."
             )
 
-    for field, value in data.model_dump(exclude_unset=True).items():
+    update_dict = data.model_dump(exclude_unset=True)
+    if "email_pro" in update_dict:
+        update_dict["email"] = update_dict["email_pro"]
+    if "secteur_activite" in update_dict:
+        update_dict["secteur"] = update_dict["secteur_activite"]
+
+    for field, value in update_dict.items():
         setattr(org, field, value)
 
     db.commit()

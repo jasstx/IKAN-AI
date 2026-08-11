@@ -3,6 +3,7 @@ Point d'entrée principal de l'API IKAN AI.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.core.config import settings
 from app.api.v1.router import api_router
@@ -29,8 +30,23 @@ app = FastAPI(
 
 @app.on_event("startup")
 def on_startup():
-    """Création automatique des tables au démarrage de l'application."""
+    """Création automatique des tables et synchronisation des colonnes PostgreSQL."""
     Base.metadata.create_all(bind=engine)
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE organisations ADD COLUMN IF NOT EXISTS logo TEXT;"))
+            conn.execute(text("ALTER TABLE organisations ADD COLUMN IF NOT EXISTS secteur_activite VARCHAR(100) DEFAULT 'Télécommunications';"))
+            conn.execute(text("ALTER TABLE organisations ADD COLUMN IF NOT EXISTS pays_region VARCHAR(100) DEFAULT 'Tunisie / Afrique du Nord';"))
+            conn.execute(text("ALTER TABLE organisations ADD COLUMN IF NOT EXISTS email_pro VARCHAR(255);"))
+            conn.execute(text("ALTER TABLE organisations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();"))
+            conn.execute(text("ALTER TABLE organisations ALTER COLUMN logo TYPE TEXT;"))
+            conn.execute(text("ALTER TABLE organisations ALTER COLUMN secteur DROP NOT NULL;"))
+            conn.execute(text("ALTER TABLE organisations ALTER COLUMN email DROP NOT NULL;"))
+            conn.execute(text("UPDATE organisations SET secteur_activite = secteur WHERE secteur_activite IS NULL AND secteur IS NOT NULL;"))
+            conn.execute(text("UPDATE organisations SET email_pro = email WHERE email_pro IS NULL AND email IS NOT NULL;"))
+            conn.execute(text("UPDATE organisations SET created_at = date_creation WHERE created_at IS NULL AND date_creation IS NOT NULL;"))
+    except Exception as e:
+        print(f"[STARTUP DB MIGRATION LOG] {e}")
 
 # Configuration CORS
 app.add_middleware(

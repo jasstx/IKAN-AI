@@ -19,12 +19,12 @@ class Organisation(Base):
     )
     nom: Mapped[str] = mapped_column(String(255), nullable=False)
     logo: Mapped[str | None] = mapped_column(Text, nullable=True)
-    secteur_activite: Mapped[str] = mapped_column(String(100), nullable=False, default="Télécommunications")
-    pays_region: Mapped[str] = mapped_column(String(100), nullable=False, default="Tunisie / Afrique du Nord")
-    email_pro: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    secteur_activite: Mapped[str | None] = mapped_column(String(100), nullable=True, default="Télécommunications")
+    pays_region: Mapped[str | None] = mapped_column(String(100), nullable=True, default="Tunisie / Afrique du Nord")
+    email_pro: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=True
     )
 
     # Colonnes héritées (legacy) pour compatibilité
