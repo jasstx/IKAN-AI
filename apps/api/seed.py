@@ -24,6 +24,7 @@ from app.models.feedback import Feedback
 from app.models.suggestion import Suggestion
 from app.models.demande_contact import DemandeContact
 from app.core.security import get_password_hash
+from app.core.config import settings
 from app.services.ai.analyse_service import analyser_feedback
 
 logging.basicConfig(level=logging.INFO)
@@ -57,9 +58,10 @@ def seed_database():
         org = Organisation(
             id=uuid.uuid4(),
             nom="Orange Tunisie",
-            secteur="Télécommunications",
-            email="contact@orange.tn",
-            telephone="+216 31 111 111",
+            logo="https://upload.wikimedia.org/wikipedia/commons/c/c8/Orange_logo.svg",
+            secteur_activite="Télécommunications",
+            pays_region="Tunisie / Afrique du Nord",
+            email_pro="contact@orange.tn",
             active=True
         )
         db.add(org)
@@ -168,11 +170,12 @@ def seed_database():
         qr_codes = []
         for idx, ag in enumerate(agences):
             code_str = f"QR-ORANGE-{ag.ville.upper()}-01"
+            url_val = f"{settings.PUBLIC_CLIENT_URL.rstrip('/')}/feedback/{code_str}"
             qr = QRCode(
                 id=uuid.uuid4(),
                 agence_id=ag.id,
                 code=code_str,
-                url=f"http://localhost:4321/feedback/{code_str}",
+                url=url_val,
                 label=f"Borne Accueil - {ag.nom}",
                 actif=True
             )

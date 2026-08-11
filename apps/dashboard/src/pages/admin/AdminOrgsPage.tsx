@@ -6,7 +6,14 @@ export default function AdminOrgsPage() {
   const [orgs, setOrgs] = useState<Organisation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ nom: '', secteur: '', email: '', telephone: '' });
+  const [errorMsg, setErrorMsg] = useState('');
+  const [form, setForm] = useState({
+    nom: '',
+    logo: '',
+    secteur_activite: '',
+    pays_region: '',
+    email_pro: '',
+  });
 
   useEffect(() => {
     organisationsApi.list().then((r) => {
@@ -17,11 +24,24 @@ export default function AdminOrgsPage() {
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
-    await organisationsApi.create(form);
-    const r = await organisationsApi.list();
-    setOrgs(r.data);
-    setShowForm(false);
-    setForm({ nom: '', secteur: '', email: '', telephone: '' });
+    setErrorMsg('');
+    try {
+      const payload = {
+        nom: form.nom,
+        logo: form.logo.trim() || null,
+        secteur_activite: form.secteur_activite,
+        pays_region: form.pays_region,
+        email_pro: form.email_pro,
+      };
+      await organisationsApi.create(payload);
+      const r = await organisationsApi.list();
+      setOrgs(r.data);
+      setShowForm(false);
+      setForm({ nom: '', logo: '', secteur_activite: '', pays_region: '', email_pro: '' });
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail || "Erreur lors de la création de l'organisation.";
+      setErrorMsg(detail);
+    }
   };
 
   const deleteOrg = async (id: string) => {
@@ -30,7 +50,7 @@ export default function AdminOrgsPage() {
     setOrgs((prev) => prev.filter((o) => o.id !== id));
   };
 
-  if (loading) return <div style={{ color: 'var(--color-text-muted)' }}>Chargement...</div>;
+  if (loading) return <div style={{ color: 'var(--color-text-muted)', padding: '32px' }}>Chargement...</div>;
 
   return (
     <div>
@@ -78,58 +98,122 @@ export default function AdminOrgsPage() {
           onClick={() => setShowForm(!showForm)}
           style={{ background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 18px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, fontSize: '0.9rem' }}
         >
-          + Nouvelle organisation
+          {showForm ? 'Fermer' : '+ Nouvelle organisation'}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={create} style={{ background: 'white', borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)', marginBottom: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          {[
-            { key: 'nom', label: 'Nom', type: 'text', required: true },
-            { key: 'secteur', label: 'Secteur', type: 'text', required: true },
-            { key: 'email', label: 'Email', type: 'email', required: true },
-            { key: 'telephone', label: 'Téléphone', type: 'text', required: false },
-          ].map(({ key, label, type, required }) => (
-            <div key={key}>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px', fontSize: '0.85rem' }}>{label}</label>
+        <form onSubmit={create} style={{ background: 'white', borderRadius: 'var(--radius)', padding: '24px', boxShadow: 'var(--shadow)', marginBottom: '20px' }}>
+          <h3 style={{ marginBottom: '16px', fontSize: '1.05rem', fontWeight: 700, color: '#02302D' }}>Créer une organisation</h3>
+
+          {errorMsg && (
+            <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '10px 14px', borderRadius: '8px', fontSize: '0.88rem', marginBottom: '16px' }}>
+              ⚠️ {errorMsg}
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px', fontSize: '0.85rem' }}>Nom de l'entreprise *</label>
               <input
-                type={type}
-                value={(form as any)[key]}
-                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                required={required}
-                style={{ width: '100%', padding: '10px', border: '2px solid var(--color-border)', borderRadius: '6px', fontFamily: 'inherit', fontSize: '0.9rem' }}
+                type="text"
+                placeholder="ex: Orange Tunisie"
+                value={form.nom}
+                onChange={(e) => setForm({ ...form, nom: e.target.value })}
+                required
+                style={{ width: '100%', padding: '10px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontFamily: 'inherit', fontSize: '0.9rem' }}
               />
             </div>
-          ))}
-          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-            <button type="button" onClick={() => setShowForm(false)} style={{ padding: '10px 18px', border: '2px solid var(--color-border)', background: 'transparent', borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
-            <button type="submit" style={{ padding: '10px 18px', background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>Créer</button>
+
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px', fontSize: '0.85rem' }}>Email professionnel *</label>
+              <input
+                type="email"
+                placeholder="ex: contact@orange.tn"
+                value={form.email_pro}
+                onChange={(e) => setForm({ ...form, email_pro: e.target.value })}
+                required
+                style={{ width: '100%', padding: '10px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontFamily: 'inherit', fontSize: '0.9rem' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px', fontSize: '0.85rem' }}>Secteur d'activité *</label>
+              <input
+                type="text"
+                placeholder="ex: Télécommunications, Banque, Hôtellerie..."
+                value={form.secteur_activite}
+                onChange={(e) => setForm({ ...form, secteur_activite: e.target.value })}
+                required
+                style={{ width: '100%', padding: '10px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontFamily: 'inherit', fontSize: '0.9rem' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px', fontSize: '0.85rem' }}>Pays / Région *</label>
+              <input
+                type="text"
+                placeholder="ex: Tunisie / Afrique du Nord"
+                value={form.pays_region}
+                onChange={(e) => setForm({ ...form, pays_region: e.target.value })}
+                required
+                style={{ width: '100%', padding: '10px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontFamily: 'inherit', fontSize: '0.9rem' }}
+              />
+            </div>
+
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px', fontSize: '0.85rem' }}>Logo (URL / Chemin d'accès - optionnel)</label>
+              <input
+                type="text"
+                placeholder="ex: https://domaine.com/assets/logo.png"
+                value={form.logo}
+                onChange={(e) => setForm({ ...form, logo: e.target.value })}
+                style={{ width: '100%', padding: '10px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontFamily: 'inherit', fontSize: '0.9rem' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '18px' }}>
+            <button type="button" onClick={() => setShowForm(false)} style={{ padding: '10px 18px', border: '1.5px solid #e2e8f0', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
+            <button type="submit" style={{ padding: '10px 22px', background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>Enregistrer</button>
           </div>
         </form>
       )}
 
       <div style={{ background: 'white', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-          <thead style={{ background: 'var(--color-bg)' }}>
+          <thead style={{ background: '#f8fafc' }}>
             <tr>
-              {['Nom', 'Secteur', 'Email', 'Statut', 'Actions'].map((h) => (
-                <th key={h} style={{ textAlign: 'left', padding: '12px 16px', color: 'var(--color-text-muted)', fontWeight: 600 }}>{h}</th>
+              {['Organisation', 'Secteur d\'activité', 'Pays / Région', 'Email Pro', 'Statut', 'Actions'].map((h) => (
+                <th key={h} style={{ textAlign: 'left', padding: '12px 16px', color: '#64748b', fontWeight: 600 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {orgs.map((o) => (
-              <tr key={o.id} style={{ borderTop: '1px solid var(--color-border)' }}>
-                <td style={{ padding: '12px 16px', fontWeight: 600 }}>{o.nom}</td>
-                <td style={{ padding: '12px 16px', color: 'var(--color-text-muted)' }}>{o.secteur}</td>
-                <td style={{ padding: '12px 16px' }}>{o.email}</td>
+              <tr key={o.id} style={{ borderTop: '1px solid #f1f5f9' }}>
+                <td style={{ padding: '12px 16px', fontWeight: 600 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {o.logo ? (
+                      <img src={o.logo} alt={o.nom} style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'contain' }} />
+                    ) : (
+                      <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>
+                        {o.nom.substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <span>{o.nom}</span>
+                  </div>
+                </td>
+                <td style={{ padding: '12px 16px', color: '#475569' }}>{o.secteur_activite || o.secteur || '—'}</td>
+                <td style={{ padding: '12px 16px', color: '#475569' }}>{o.pays_region || '—'}</td>
+                <td style={{ padding: '12px 16px', fontWeight: 500 }}>{o.email_pro || o.email}</td>
                 <td style={{ padding: '12px 16px' }}>
                   <span className={`badge ${o.active ? 'badge-success' : 'badge-neutral'}`}>
                     {o.active ? 'Actif' : 'Inactif'}
                   </span>
                 </td>
                 <td style={{ padding: '12px 16px' }}>
-                  <button onClick={() => deleteOrg(o.id)} style={{ color: 'var(--color-error)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}>Supprimer</button>
+                  <button onClick={() => deleteOrg(o.id)} style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>Supprimer</button>
                 </td>
               </tr>
             ))}

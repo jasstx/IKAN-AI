@@ -19,11 +19,15 @@ export interface User {
 export interface Organisation {
   id: string;
   nom: string;
-  secteur: string;
-  email: string;
-  telephone?: string;
+  logo?: string;
+  secteur_activite: string;
+  secteur?: string;
+  pays_region: string;
+  email_pro: string;
+  email?: string;
   active: boolean;
-  date_creation: string;
+  created_at: string;
+  date_creation?: string;
 }
 
 export interface Agence {
