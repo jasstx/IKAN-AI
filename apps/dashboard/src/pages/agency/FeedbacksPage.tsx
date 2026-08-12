@@ -38,6 +38,21 @@ const selectStyle: React.CSSProperties = {
   cursor: 'pointer',
 };
 
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  try {
+    return new Date(dateStr).toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return dateStr;
+  }
+};
+
 export default function FeedbacksPage() {
   const currentUser = useAuthStore((s) => s.user);
   const isCXOrAdmin = currentUser?.role === 'cx_manager' || currentUser?.role === 'admin';
@@ -45,6 +60,8 @@ export default function FeedbacksPage() {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [agences, setAgences] = useState<Agence[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [toast, setToast] = useState('');
 
   // Filtres
@@ -56,18 +73,45 @@ export default function FeedbacksPage() {
   const [search, setSearch] = useState<string>('');
 
   useEffect(() => {
-    const promises: Promise<any>[] = [feedbacksApi.list({ limit: 200 })];
-    if (isCXOrAdmin) {
-      promises.push(agencesApi.list());
+    let cancelled = false;
+
+    async function loadData() {
+      setLoading(true);
+      setFetchError(null);
+      try {
+        const fRes = await feedbacksApi.list({ limit: 200 });
+        if (!cancelled) {
+          setFeedbacks(fRes?.data || []);
+        }
+
+        if (isCXOrAdmin) {
+          try {
+            const aRes = await agencesApi.list();
+            if (!cancelled && aRes?.data) {
+              setAgences(aRes.data);
+            }
+          } catch (aErr) {
+            console.warn('Erreur chargement des agences:', aErr);
+          }
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Erreur chargement des feedbacks:', err);
+          setFetchError('Impossible de charger les feedbacks. Veuillez vérifier la connexion API.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
     }
 
-    Promise.all(promises)
-      .then(([fRes, aRes]) => {
-        setFeedbacks(fRes.data);
-        if (aRes) setAgences(aRes.data);
-      })
-      .finally(() => setLoading(false));
-  }, [isCXOrAdmin]);
+    loadData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isCXOrAdmin, refreshTrigger]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -75,6 +119,7 @@ export default function FeedbacksPage() {
   };
 
   const handleTraiterContact = async (contactId: string) => {
+    if (!contactId) return;
     try {
       await feedbacksApi.traiterDemandeContact(contactId);
       setFeedbacks((prev) =>
@@ -122,14 +167,15 @@ export default function FeedbacksPage() {
   }, [feedbacks]);
 
   const handleAgenceFilterChange = async (agenceId: string) => {
-    setSelectedAgenceId(agenceId);
     setLoading(true);
     try {
       const params = agenceId !== 'all' ? { agence_id: agenceId, limit: 200 } : { limit: 200 };
       const r = await feedbacksApi.list(params);
-      setFeedbacks(r.data);
-    } catch {
-      showToast('Erreur lors du filtrage');
+      setFeedbacks(r.data || []);
+      setSelectedAgenceId(agenceId);
+    } catch (err) {
+      console.error('Erreur filtrage agence:', err);
+      showToast('❌ Erreur lors du filtrage par agence');
     } finally {
       setLoading(false);
     }
@@ -146,6 +192,29 @@ export default function FeedbacksPage() {
           background: '#1e293b', color: 'white', padding: '12px 20px',
           borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)', fontSize: '0.9rem',
         }}>{toast}</div>
+      )}
+
+      {/* Bandeau d'erreur de chargement initial */}
+      {fetchError && (
+        <div style={{
+          background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b',
+          borderRadius: '12px', padding: '16px 20px', marginBottom: '24px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px',
+        }}>
+          <div>
+            <strong>⚠️ Erreur de connexion : </strong> {fetchError}
+          </div>
+          <button
+            onClick={() => setRefreshTrigger((prev) => prev + 1)}
+            style={{
+              background: '#dc2626', color: 'white', border: 'none',
+              borderRadius: '6px', padding: '8px 16px', cursor: 'pointer',
+              fontWeight: 600, fontSize: '0.85rem',
+            }}
+          >
+            🔄 Réessayer
+          </button>
+        </div>
       )}
 
       {/* ── Header Carte Feedbacks ── */}
@@ -256,6 +325,21 @@ export default function FeedbacksPage() {
           <option value="communication">💬 Communication</option>
         </select>
 
+        {/* Filtre Spécial (Discordances / Rappels) */}
+        <select
+          value={filterSpecial}
+          onChange={(e) => setFilterSpecial(e.target.value)}
+          style={{
+            ...selectStyle,
+            fontWeight: filterSpecial !== 'all' ? 700 : 400,
+            borderColor: filterSpecial !== 'all' ? '#ea580c' : '#e2e8f0',
+            background: filterSpecial !== 'all' ? '#fff7ed' : 'white',
+          }}
+        >
+          <option value="all">🎯 Tous les cas</option>
+          <option value="discordance">⚡ Discordances uniquement</option>
+          <option value="contact">📞 Rappels client en attente</option>
+        </select>
       </div>
 
       {/* Banner Agence Sélectionnée */}
@@ -267,7 +351,7 @@ export default function FeedbacksPage() {
         }}>
           <div>
             <div style={{ fontSize: '1rem', fontWeight: 800, color: '#166534' }}>
-              🏬 Agence : {agences.find(a => a.id === selectedAgenceId)?.nom}
+              🏬 Agence : {agences.find(a => a.id === selectedAgenceId)?.nom || selectedAgenceId}
             </div>
             <div style={{ fontSize: '0.82rem', color: '#15803d', marginTop: '2px' }}>
               Affichage détaillé des avis pour cette agence ({filteredFeedbacks.length} avis répertoriés)
@@ -297,11 +381,13 @@ export default function FeedbacksPage() {
             const sentimentInfo = f.analyse_ia ? SENTIMENT_STYLE[f.analyse_ia.sentiment] : null;
             const criticiteInfo = f.analyse_ia ? CRITICITE_STYLE[f.analyse_ia.criticite] : null;
             const themeLabel = f.analyse_ia?.theme_principal ? THEME_LABELS[f.analyse_ia.theme_principal] || f.analyse_ia.theme_principal : null;
+            const noteStars = STAR_MAP[f.note] || '★'.repeat(Math.max(1, Math.min(5, f.note || 1)));
+            const noteColor = NOTE_COLOR[f.note] || '#94a3b8';
 
             return (
               <div key={f.id} style={{
                 background: 'white', borderRadius: '12px', padding: '20px 24px',
-                boxShadow: 'var(--shadow)', borderLeft: `5px solid ${NOTE_COLOR[f.note] || '#94a3b8'}`,
+                boxShadow: 'var(--shadow)', borderLeft: `5px solid ${noteColor}`,
               }}>
                 {/* Ligne Supérieure : Note, Date, Badges IA */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
@@ -316,8 +402,8 @@ export default function FeedbacksPage() {
                       </span>
                     )}
 
-                    <span style={{ fontSize: '1.2rem', color: NOTE_COLOR[f.note], fontWeight: 800 }}>
-                      {STAR_MAP[f.note]} ({f.note}/5)
+                    <span style={{ fontSize: '1.2rem', color: noteColor, fontWeight: 800 }}>
+                      {noteStars} ({f.note}/5)
                     </span>
 
                     {/* Sentiment Badge */}
@@ -363,7 +449,7 @@ export default function FeedbacksPage() {
                   </div>
 
                   <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                    {new Date(f.date_soumission).toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {formatDate(f.date_soumission)}
                   </span>
                 </div>
 
@@ -404,7 +490,7 @@ export default function FeedbacksPage() {
                       </span>
                     ) : (
                       <button
-                        onClick={() => handleTraiterContact(f.demande_contact!.id)}
+                        onClick={() => f.demande_contact?.id && handleTraiterContact(f.demande_contact.id)}
                         style={{
                           background: '#ea580c', color: 'white', border: 'none',
                           borderRadius: '6px', padding: '6px 14px', cursor: 'pointer',
@@ -424,3 +510,4 @@ export default function FeedbacksPage() {
     </div>
   );
 }
+

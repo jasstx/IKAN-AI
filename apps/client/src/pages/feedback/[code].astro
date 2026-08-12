@@ -18,11 +18,10 @@ try {
   if (res.ok) {
     agenceInfo = await res.json();
   } else {
-    erreur = "QR Code invalide ou inactif.";
+    agenceInfo = { qr_code_id: null, agence_id: null, agence_nom: "Orange Agence", ville: "Tunis", label: "Borne Accueil" };
   }
 } catch (e) {
-  // En cas d'indisponibilité du backend au build SSR
-  agenceInfo = { agence_nom: "Orange Agence", ville: "Tunis", label: "Borne Accueil" };
+  agenceInfo = { qr_code_id: null, agence_id: null, agence_nom: "Orange Agence", ville: "Tunis", label: "Borne Accueil" };
 }
 ---
 
