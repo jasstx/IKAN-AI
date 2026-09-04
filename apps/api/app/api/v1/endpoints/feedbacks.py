@@ -1,0 +1,350 @@
+"""
+Endpoints Feedbacks — soumission par les clients (anonyme) et consultation par les managers.
+"""
+import logging
+from uuid import UUID
+from typing import List, Optional
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
+from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
+
+from app.api.deps import (
+    get_current_active_user,
+    get_cx_or_agency_manager,
+    get_feedback_viewer_user,
+    get_db,
+)
+from app.models.utilisateur import Utilisateur
+from app.models.feedback import Feedback
+from app.models.qr_code import QRCode
+from app.models.suggestion import Suggestion
+from app.models.demande_contact import DemandeContact
+from app.models.enums import UserRole
+from app.schemas.feedback import FeedbackCreate, FeedbackResponse
+from app.services.ai.analyse_service import analyser_feedback
+
+router = APIRouter()
+
+
+@router.post("/", response_model=FeedbackResponse, status_code=status.HTTP_201_CREATED)
+def submit_feedback(
+    qr_code: str,
+    data: FeedbackCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Soumet un feedback client — endpoint PUBLIC (pas d'authentification requise).
+    Déclenche l'analyse IA en tâche de fond.
+    BF-01, BF-02, BF-03, BF-04, BF-05
+    """
+    # Valider le QR code (case-insensitive + fallback agence_id)
+    from sqlalchemy import func
+    clean_code = qr_code.strip()
+    qr = db.query(QRCode).filter(
+        func.lower(QRCode.code) == clean_code.lower(),
+        QRCode.actif == True,
+    ).first()
+
+    if not qr:
+        try:
+            possible_uuid = UUID(clean_code)
+            agence = db.query(Agence).filter(Agence.id == possible_uuid).first()
+            if agence:
+                qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
+                if not qr:
+                    base_url = settings.PUBLIC_CLIENT_URL.rstrip("/")
+                    clean_name = agence.nom.upper().replace(" ", "-")[:12]
+                    code_str = f"QR-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
+                    qr = QRCode(
+                        id=uuid.uuid4(),
+                        agence_id=agence.id,
+                        code=code_str,
+                        url=f"{base_url}/feedback/{code_str}",
+                        label=f"Borne Accueil - {agence.nom}",
+                        actif=True
+                    )
+                    db.add(qr)
+                    db.commit()
+                    db.refresh(qr)
+        except ValueError:
+            pass
+        # 3. Si non trouvé, chercher par nom d'agence ou ville
+        if not qr:
+            agence = db.query(Agence).filter(
+                (func.lower(Agence.nom).ilike(f"%{clean_code.lower()}%")) |
+                (func.lower(Agence.ville).ilike(f"%{clean_code.lower()}%"))
+            ).first()
+            if agence:
+                qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
+                if not qr:
+                    base_url = settings.PUBLIC_CLIENT_URL.rstrip("/")
+                    clean_name = agence.nom.upper().replace(" ", "-")[:12]
+                    code_str = f"QR-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
+                    qr = QRCode(
+                        id=uuid.uuid4(),
+                        agence_id=agence.id,
+                        code=code_str,
+                        url=f"{base_url}/feedback/{code_str}",
+                        label=f"Borne Accueil - {agence.nom}",
+                        actif=True
+                    )
+                    db.add(qr)
+                    db.commit()
+                    db.refresh(qr)
+
+        if not qr:
+            raise HTTPException(status_code=404, detail=f"QR Code ou Agence '{clean_code}' invalide ou inactif")
+
+    try:
+        # Résoudre la note à partir du sentiment si note non fournie
+        note_val = data.note
+        if note_val is None:
+            if data.sentiment:
+                s = data.sentiment.lower().strip()
+                if "negatif" in s or "negative" in s:
+                    note_val = 1
+                elif "positif" in s or "positive" in s:
+                    note_val = 5
+                else:
+                    note_val = 3
+            else:
+                note_val = 3
+
+        # Créer le feedback
+        feedback = Feedback(
+            qr_code_id=qr.id,
+            note=note_val,
+            commentaire=data.commentaire,
+        )
+        db.add(feedback)
+        db.flush()  # Obtenir l'ID sans commit
+
+        # Ajouter la suggestion si fournie (BF-04)
+        if data.suggestion:
+            suggestion = Suggestion(
+                feedback_id=feedback.id,
+                contenu=data.suggestion,
+            )
+            db.add(suggestion)
+
+        # Ajouter la demande de contact si fournie
+        if data.souhaite_etre_rappele or data.contact_email:
+            contact = DemandeContact(
+                feedback_id=feedback.id,
+                nom=data.contact_nom,
+                telephone=data.contact_telephone,
+                email=data.contact_email,
+                souhaite_etre_rappele=data.souhaite_etre_rappele,
+            )
+            db.add(contact)
+
+        db.commit()
+        db.refresh(feedback)
+
+        # Analyse IA immédiate (sentiment, thème, criticité, discordance, recommandations)
+        try:
+            analyser_feedback(feedback.id, db)
+            db.expire_all()
+            db.refresh(feedback)
+        except Exception as ai_err:
+            logger.error(f"Erreur lors de l'analyse IA synchrone du feedback {feedback.id}: {ai_err}")
+
+        res_item = FeedbackResponse.model_validate(feedback)
+        res_item.agence_id = qr.agence_id
+        res_item.agence_nom = qr.agence.nom if (qr and qr.agence) else "Agence"
+
+        return res_item
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        import traceback
+        err_trace = traceback.format_exc()
+        print(f"[SUBMIT FEEDBACK ERROR] {err_trace}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur serveur submit_feedback: {str(e)} | Trace: {err_trace[-300:]}"
+        )
+
+
+@router.get("/", response_model=List[FeedbackResponse])
+def list_feedbacks(
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_feedback_viewer_user),
+    agence_id: Optional[UUID] = Query(None),
+    date_debut: Optional[datetime] = Query(None),
+    date_fin: Optional[datetime] = Query(None),
+    limit: int = Query(50, le=1000),
+    offset: int = Query(0),
+):
+    """
+    Liste les feedbacks pour CX Manager et Agency Manager uniquement.
+    Exclusion stricte du rôle ADMIN (403).
+    """
+    # Base query avec jointures pour filtrer par organisation
+    query = (
+        db.query(Feedback)
+        .join(QRCode, Feedback.qr_code_id == QRCode.id)
+    )
+
+    if current_user.role == UserRole.AGENCY_MANAGER:
+        # Ne voit que les feedbacks de son agence
+        query = query.filter(QRCode.agence_id == current_user.agence_id)
+    elif current_user.role == UserRole.CX_MANAGER:
+        # Voit les feedbacks des agences de son organisation
+        from app.models.agence import Agence
+        if current_user.organisation_id:
+            query = query.join(Agence, QRCode.agence_id == Agence.id).filter(
+                Agence.organisation_id == current_user.organisation_id
+            )
+        if agence_id:
+            query = query.filter(QRCode.agence_id == agence_id)
+
+    if date_debut:
+        query = query.filter(Feedback.date_soumission >= date_debut)
+    if date_fin:
+        query = query.filter(Feedback.date_soumission <= date_fin)
+
+    feedbacks = query.order_by(Feedback.date_soumission.desc()).offset(offset).limit(limit).all()
+
+    response_list = []
+    for f in feedbacks:
+        item = FeedbackResponse.model_validate(f)
+        if f.qr_code and f.qr_code.agence:
+            item.agence_id = f.qr_code.agence_id
+            item.agence_nom = f.qr_code.agence.nom
+
+        fid = str(f.id)
+        if fid in TREATMENT_STORE:
+            item.statut_traitement = TREATMENT_STORE[fid].get("statut", "nouveau")
+            item.notes_internes = TREATMENT_STORE[fid].get("notes", [])
+            item.discordance_status = TREATMENT_STORE[fid].get("discordance")
+        else:
+            item.statut_traitement = "nouveau"
+            item.notes_internes = []
+            item.discordance_status = None
+
+        response_list.append(item)
+
+    return response_list
+
+
+@router.get("/{feedback_id}", response_model=FeedbackResponse)
+def get_feedback(
+    feedback_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_feedback_viewer_user),
+):
+    """Obtient un feedback par ID (CX Manager / Agency Manager)."""
+    feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback introuvable")
+
+    # Auto-analyse si manquante
+    if not feedback.analyse_ia:
+        try:
+            analyser_feedback(feedback.id, db)
+            db.refresh(feedback)
+        except Exception as e:
+            logger.warning(f"Auto-analyse fallback pour feedback {feedback.id}: {e}")
+
+    # Vérification d'accès
+    qr = db.query(QRCode).filter(QRCode.id == feedback.qr_code_id).first()
+    if current_user.role == UserRole.AGENCY_MANAGER and qr.agence_id != current_user.agence_id:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+
+    item = FeedbackResponse.model_validate(feedback)
+    if qr and qr.agence:
+        item.agence_id = qr.agence_id
+        item.agence_nom = qr.agence.nom
+
+    return item
+
+
+# Stockage in-memory persistant pendant le runtime pour le traitement des feedbacks
+TREATMENT_STORE: dict[str, dict] = {}
+
+
+@router.patch("/demandes-contact/{contact_id}/traiter")
+def marquer_demande_contact_traitee(
+    contact_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """Marque une demande de contact client comme traitée (CX Manager / Agency Manager)."""
+    dc = db.query(DemandeContact).filter(DemandeContact.id == contact_id).first()
+    if not dc:
+        raise HTTPException(status_code=404, detail="Demande de contact introuvable")
+    dc.traitee = True
+    db.commit()
+    return {"message": "Demande de contact marquée comme traitée"}
+
+
+@router.patch("/{feedback_id}/statut")
+def update_feedback_statut(
+    feedback_id: UUID,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """Met à jour le statut de traitement d'un feedback ('nouveau', 'en_cours', 'recontacte', 'resolu', 'escalade')."""
+    fid = str(feedback_id)
+    if fid not in TREATMENT_STORE:
+        TREATMENT_STORE[fid] = {"statut": "nouveau", "notes": [], "discordance": None}
+    
+    statut = payload.get("statut", "en_cours")
+    TREATMENT_STORE[fid]["statut"] = statut
+    return {"message": "Statut mis à jour avec succès", "statut": statut}
+
+
+@router.post("/{feedback_id}/notes-internes")
+def add_note_interne(
+    feedback_id: UUID,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """Ajoute une note interne confidentielle au journal du feedback."""
+    fid = str(feedback_id)
+    if fid not in TREATMENT_STORE:
+        TREATMENT_STORE[fid] = {"statut": "nouveau", "notes": [], "discordance": None}
+
+    texte = payload.get("texte", "").strip()
+    if not texte:
+        raise HTTPException(status_code=400, detail="Le texte de la note ne peut pas être vide")
+
+    auteur_nom = payload.get("auteur") or f"{current_user.prenom} {current_user.nom}"
+    note_item = {
+        "id": f"note-{datetime.now().timestamp()}",
+        "date": datetime.now().isoformat(),
+        "auteur": auteur_nom,
+        "texte": texte,
+    }
+    TREATMENT_STORE[fid]["notes"].append(note_item)
+    # Passer en 'en_cours' automatiquement si encore 'nouveau'
+    if TREATMENT_STORE[fid]["statut"] == "nouveau":
+        TREATMENT_STORE[fid]["statut"] = "en_cours"
+
+    return {"message": "Note interne ajoutée", "note": note_item, "statut": TREATMENT_STORE[fid]["statut"]}
+
+
+@router.patch("/{feedback_id}/discordance")
+def update_discordance_status(
+    feedback_id: UUID,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """Met à jour le statut de la discordance IA ('confirmee' ou 'traitee_faux_positif')."""
+    fid = str(feedback_id)
+    if fid not in TREATMENT_STORE:
+        TREATMENT_STORE[fid] = {"statut": "nouveau", "notes": [], "discordance": None}
+
+    status_val = payload.get("status", "confirmee")
+    TREATMENT_STORE[fid]["discordance"] = status_val
+    return {"message": "Statut discordance mis à jour", "discordance_status": status_val}
+

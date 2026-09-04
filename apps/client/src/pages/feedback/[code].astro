@@ -1,0 +1,810 @@
+---
+/**
+ * Page de Feedback Client QR — IKAN AI
+ * URL : /feedback/{code}
+ * Conforme aux maquettes officielles (Accueil, Note avec Smileys, Idea, Recontact)
+ */
+import FeedbackLayout from '../../layouts/FeedbackLayout.astro';
+import IkanLogo from '../../components/IkanLogo.astro';
+
+const { code } = Astro.params;
+const SSR_API_URL = import.meta.env.PUBLIC_API_URL || (import.meta.env.DEV ? 'http://localhost:8000/api/v1' : 'https://ikanai-api.onrender.com/api/v1');
+
+let agenceInfo = null;
+let erreur = null;
+
+try {
+  const cleanCode = (code || '').trim();
+  const res = await fetch(`${SSR_API_URL}/qr-codes/${encodeURIComponent(cleanCode)}/validate`);
+  if (res.ok) {
+    agenceInfo = await res.json();
+  }
+} catch (e) {
+  // L'hydratation côté client prendra le relais
+}
+---
+
+<FeedbackLayout
+  title={agenceInfo?.agence_nom ? `Avis — ${agenceInfo.agence_nom}` : 'IKAN AI — Donner votre avis'}
+  agenceNom={agenceInfo?.agence_nom}
+>
+  <div class="mobile-container">
+    
+    <!-- HEADER HAUT -->
+    <header class="app-header">
+      <button type="button" id="globalBackBtn" class="back-link" style="display:none;">
+        ← Retour
+      </button>
+
+      <div class="header-logos">
+        <div class="logo-box">
+          <IkanLogo variant="dark" size={32} />
+        </div>
+        <div class="logo-box agency-badge">
+          <span id="agencyBadgeText">{agenceInfo?.agence_nom || 'AGENCE'}</span>
+        </div>
+      </div>
+    </header>
+
+    {erreur ? (
+      <div class="error-screen">
+        <div class="error-icon">⚠️</div>
+        <h2>QR Code invalide</h2>
+        <p>{erreur}</p>
+      </div>
+    ) : (
+      <main class="form-flow">
+
+        <!-- ================= ECRAN 1 : ACCUEIL / CHOIX ================= -->
+        <section id="screen-welcome" class="screen-view">
+          <div class="welcome-hero">
+            <!-- Icone Emojis Sourire Jaune-Lime -->
+            <div class="hero-avatar">
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="32" r="32" fill="#BCCF00"/>
+                <circle cx="22" cy="26" r="3" fill="#02302D"/>
+                <circle cx="42" cy="26" r="3" fill="#02302D"/>
+                <path d="M20 38C20 38 24 46 32 46C40 46 44 38 44 38" stroke="#02302D" stroke-width="4" stroke-linecap="round"/>
+              </svg>
+            </div>
+            
+            <p class="greeting">Bonjour !</p>
+            <h1 class="main-title">Que pensez-vous de votre expérience ?</h1>
+            <p class="main-subtitle">Votre retour nous aide à améliorer continuellement nos services.</p>
+          </div>
+
+          <div class="welcome-actions">
+            <!-- Option 1 : Donner son avis / Ressenti -->
+            <button type="button" id="btnChoiceSentiment" class="choice-card choice-primary">
+              <div class="choice-text">
+                <span class="choice-title">Donner mon avis</span>
+                <span class="choice-sub">Partagez votre ressenti (Positif, Neutre, Négatif)</span>
+              </div>
+              <span class="chevron">›</span>
+            </button>
+
+            <!-- Option 2 : Partager une idée -->
+            <button type="button" id="btnChoiceIdea" class="choice-card choice-secondary">
+              <div class="choice-text">
+                <span class="choice-title">Partager une idée</span>
+                <span class="choice-sub">Proposez une suggestion</span>
+              </div>
+              <span class="chevron">›</span>
+            </button>
+          </div>
+        </section>
+
+
+        <!-- ================= ECRAN 2 : FORMULAIRE SENTIMENT ================= -->
+        <section id="screen-sentiment" class="screen-view" style="display:none;">
+          <h1 class="main-title text-left">Quel est votre sentiment sur votre visite ?</h1>
+          <p class="main-subtitle text-left" style="margin-bottom: 20px;">Sélectionnez votre ressenti général.</p>
+
+          <!-- 3 Choix de Sentiments -->
+          <div class="sentiments-grid" id="sentimentsGrid">
+            <!-- 1: Négatif -->
+            <button type="button" class="sentiment-btn" data-sentiment="negatif">
+              <div class="sentiment-icon bg-red">
+                <svg viewBox="0 0 36 36" width="36" height="36">
+                  <circle cx="18" cy="18" r="18" fill="#DC2626"/>
+                  <circle cx="12" cy="14" r="2" fill="#FFFFFF"/>
+                  <circle cx="24" cy="14" r="2" fill="#FFFFFF"/>
+                  <path d="M12 25 C15 21, 21 21, 24 25" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                </svg>
+              </div>
+              <span class="sentiment-label">Négatif</span>
+            </button>
+
+            <!-- 2: Neutre -->
+            <button type="button" class="sentiment-btn" data-sentiment="neutre">
+              <div class="sentiment-icon bg-yellow">
+                <svg viewBox="0 0 36 36" width="36" height="36">
+                  <circle cx="18" cy="18" r="18" fill="#F59E0B"/>
+                  <circle cx="12" cy="14" r="2" fill="#02302D"/>
+                  <circle cx="24" cy="14" r="2" fill="#02302D"/>
+                  <line x1="12" y1="23" x2="24" y2="23" stroke="#02302D" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <span class="sentiment-label">Neutre</span>
+            </button>
+
+            <!-- 3: Positif -->
+            <button type="button" class="sentiment-btn" data-sentiment="positif">
+              <div class="sentiment-icon bg-green">
+                <svg viewBox="0 0 36 36" width="36" height="36">
+                  <circle cx="18" cy="18" r="18" fill="#3C7730"/>
+                  <circle cx="12" cy="14" r="2" fill="#FFFFFF"/>
+                  <circle cx="24" cy="14" r="2" fill="#FFFFFF"/>
+                  <path d="M11 20 C15 26, 21 26, 25 20" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                </svg>
+              </div>
+              <span class="sentiment-label">Positif</span>
+            </button>
+          </div>
+
+          <!-- Champ Commentaire -->
+          <div class="field-group">
+            <label class="field-label">
+              Un commentaire ou explication ? <span class="optional">(facultatif)</span>
+            </label>
+            <textarea
+              id="inputCommentaire"
+              class="styled-textarea"
+              rows="3"
+              placeholder="Expliquez-nous votre ressenti..."
+            ></textarea>
+          </div>
+
+          <!-- Question Recontact -->
+          <div class="field-group">
+            <label class="field-label">
+              Souhaitez-vous être recontacté ? <span class="optional">(facultatif)</span>
+            </label>
+            <div class="radio-options">
+              <label class="radio-item">
+                <input type="radio" name="recontactSentiment" value="oui" />
+                <span class="radio-text">Oui</span>
+              </label>
+              <label class="radio-item">
+                <input type="radio" name="recontactSentiment" value="non" checked />
+                <span class="radio-text">Non</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Champs Contact Masqués par défaut (Téléphone et E-mail uniquement, AUCUN NOM) -->
+          <div id="contactFieldsSentiment" class="contact-subfields" style="display:none;">
+            <p style="font-size:0.82rem; color: #64748B; margin-bottom: 8px;">Renseignez au moins un moyen de contact :</p>
+            <input type="tel" id="contactTelSentiment" placeholder="Votre numéro de téléphone" class="styled-input" />
+            <input type="email" id="contactEmailSentiment" placeholder="Votre adresse e-mail" class="styled-input" />
+          </div>
+
+          <!-- Bouton Soumettre -->
+          <button type="button" id="btnSubmitSentiment" class="btn-submit">
+            <span>Envoyer</span>
+            <span class="arrow">›</span>
+          </button>
+        </section>
+
+
+        <!-- ================= ECRAN 3 : FORMULAIRE IDÉE / SUGGESTION ================= -->
+        <section id="screen-idea" class="screen-view" style="display:none;">
+          <h1 class="main-title text-left">Partagez votre idée</h1>
+          <p class="main-subtitle text-left">Votre avis nous aide à nous améliorer.</p>
+
+          <!-- Textarea Idée -->
+          <div class="field-group">
+            <textarea
+              id="inputIdea"
+              class="styled-textarea"
+              rows="4"
+              placeholder="Écrivez ici votre avis, suggestion ou remarque..."
+            ></textarea>
+          </div>
+
+          <!-- Question Recontact -->
+          <div class="field-group">
+            <label class="field-label">
+              Souhaitez-vous être recontacté ? <span class="optional">(facultatif)</span>
+            </label>
+            <div class="radio-options">
+              <label class="radio-item">
+                <input type="radio" name="recontactIdea" value="oui" />
+                <span class="radio-text">Oui</span>
+              </label>
+              <label class="radio-item">
+                <input type="radio" name="recontactIdea" value="non" checked />
+                <span class="radio-text">Non</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Champs Contact Masqués (Téléphone et E-mail uniquement) -->
+          <div id="contactFieldsIdea" class="contact-subfields" style="display:none;">
+            <p style="font-size:0.82rem; color: #64748B; margin-bottom: 8px;">Renseignez au moins un moyen de contact :</p>
+            <input type="tel" id="contactTelIdea" placeholder="Votre numéro de téléphone" class="styled-input" />
+            <input type="email" id="contactEmailIdea" placeholder="Votre adresse e-mail" class="styled-input" />
+          </div>
+
+          <!-- Bouton Soumettre Idée -->
+          <button type="button" id="btnSubmitIdea" class="btn-submit">
+            <span>Envoyer</span>
+            <span class="arrow">›</span>
+          </button>
+        </section>
+
+
+        <!-- ================= ECRAN 4 : SUCCÈS ================= -->
+        <section id="screen-success" class="screen-view" style="display:none;">
+          <div class="welcome-hero">
+            <div class="hero-avatar bg-success">
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="32" r="32" fill="#75B72A"/>
+                <path d="M20 32L28 40L44 24" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h1 class="main-title" style="margin-top:16px;">Merci pour votre retour !</h1>
+            <p class="main-subtitle">Votre avis a bien été enregistré et nous aide à améliorer la qualité de notre service.</p>
+          </div>
+        </section>
+
+      </main>
+    )}
+
+    <!-- FOOTER BAS -->
+    <footer class="app-footer">
+      <div class="footer-divider"></div>
+      <p class="footer-text">Réponse anonyme et sécurisée</p>
+    </footer>
+
+  </div>
+</FeedbackLayout>
+
+<style>
+  /* Structure globale */
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    min-height: 40px;
+  }
+
+  .back-link {
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-dark);
+    cursor: pointer;
+    padding: 6px 0;
+  }
+
+  .header-logos {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+  }
+
+  .logo-box {
+    background: #F4F6F4;
+    border-radius: 12px;
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .agency-badge {
+    border: 1px dashed #D1D5DB;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #4B5563;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 6px 12px;
+  }
+
+  .form-flow {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Écran Welcome */
+  .welcome-hero {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .hero-avatar {
+    display: inline-flex;
+    margin-bottom: 12px;
+  }
+
+  .greeting {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-dark);
+    margin-bottom: 8px;
+  }
+
+  .main-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-dark);
+    line-height: 1.25;
+    margin-bottom: 8px;
+  }
+
+  .main-subtitle {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+  }
+
+  .text-left {
+    text-align: left;
+  }
+
+  /* Choix Cartes */
+  .welcome-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .choice-card {
+    width: 100%;
+    border-radius: 18px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .choice-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .choice-primary {
+    background-color: var(--color-dark);
+    color: #FFFFFF;
+    border: none;
+    box-shadow: 0 8px 20px rgba(2, 48, 45, 0.25);
+  }
+
+  .choice-secondary {
+    background-color: #F9FAF8;
+    color: var(--color-dark);
+    border: 2px solid var(--color-border-lime);
+  }
+
+  .choice-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .choice-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .choice-sub {
+    font-size: 0.82rem;
+    opacity: 0.8;
+    margin-top: 2px;
+  }
+
+  .chevron {
+    font-size: 1.5rem;
+    font-weight: 400;
+  }
+
+  /* Grille des Sentiments */
+  .sentiments-grid {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin: 20px 0 28px 0;
+  }
+
+  .sentiment-btn {
+    background: #F9FAF8;
+    border: 2px solid #E8ECE6;
+    border-radius: 16px;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    flex: 1;
+    max-width: 110px;
+    transition: all 0.2s ease;
+  }
+
+  .sentiment-btn:hover {
+    transform: translateY(-2px);
+    border-color: #02302D;
+  }
+
+  .sentiment-btn.selected {
+    border-color: #02302D;
+    background: #F0F7F2;
+    box-shadow: 0 4px 12px rgba(2, 48, 45, 0.12);
+  }
+
+  .sentiment-btn.selected .sentiment-icon {
+    transform: scale(1.1);
+  }
+
+  .sentiment-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    transition: transform 0.2s;
+  }
+
+  .sentiment-label {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--color-dark);
+    text-align: center;
+  }
+
+  /* Formulaires & Champs */
+  .field-group {
+    margin-bottom: 20px;
+  }
+
+  .field-label {
+    display: block;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--color-dark);
+    margin-bottom: 8px;
+  }
+
+  .optional {
+    font-weight: 400;
+    color: var(--color-text-muted);
+  }
+
+  .styled-textarea {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid var(--color-border-lime);
+    border-radius: 16px;
+    font-size: 0.95rem;
+    color: var(--color-dark);
+    resize: vertical;
+    outline: none;
+  }
+
+  .styled-textarea:focus {
+    border-color: var(--color-accent);
+  }
+
+  .styled-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #D1D5DB;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    outline: none;
+  }
+
+  .styled-input:focus {
+    border-color: var(--color-dark);
+  }
+
+  /* Radio Buttons */
+  .radio-options {
+    display: flex;
+    gap: 24px;
+    margin-top: 6px;
+  }
+
+  .radio-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-dark);
+  }
+
+  .radio-item input[type="radio"] {
+    accent-color: var(--color-dark);
+    width: 18px;
+    height: 18px;
+  }
+
+  .contact-subfields {
+    margin-top: 12px;
+    background: #F9FAF8;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  /* Bouton Soumettre */
+  .btn-submit {
+    width: 100%;
+    background-color: var(--color-dark);
+    color: #FFFFFF;
+    border: 2px solid var(--color-border-lime);
+    border-radius: 16px;
+    padding: 16px 20px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    margin-top: 24px;
+    box-shadow: 0 8px 20px rgba(2, 48, 45, 0.2);
+    transition: transform 0.15s;
+  }
+
+  .btn-submit:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .arrow {
+    font-size: 1.4rem;
+  }
+
+  /* Footer */
+  .app-footer {
+    margin-top: 24px;
+    text-align: center;
+  }
+
+  .footer-divider {
+    height: 1px;
+    background-color: #E5E7EB;
+    margin-bottom: 12px;
+  }
+
+  .footer-text {
+    font-size: 0.8rem;
+    color: #9CA3AF;
+  }
+
+  /* Error */
+  .error-screen {
+    text-align: center;
+    padding: 40px 0;
+  }
+  .error-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+  }
+</style>
+
+<script>
+  // Navigation & Logic
+  const hostname = window.location.hostname;
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.');
+  const API_URL = isLocal ? `http://${hostname}:8000/api/v1` : 'https://ikanai-api.onrender.com/api/v1';
+
+  // Extraction dynamique du token QR Code depuis l'URL /feedback/[code] ou paramètre ?qr=
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  const urlParams = new URLSearchParams(window.location.search);
+  let QR_CODE = urlParams.get('qr') || urlParams.get('code') || '';
+
+  if (!QR_CODE && pathParts.length >= 2 && pathParts[0] === 'feedback') {
+    QR_CODE = decodeURIComponent(pathParts[1]);
+  } else if (!QR_CODE && pathParts.length === 1 && pathParts[0] !== 'feedback') {
+    QR_CODE = decodeURIComponent(pathParts[0]);
+  }
+
+  if (!QR_CODE) {
+    QR_CODE = 'QR-ORANGE-TUNIS-01';
+  }
+
+  // Chargement et rafraîchissement dynamique du nom de l'agence
+  async function refreshAgency() {
+    try {
+      const res = await fetch(`${API_URL}/qr-codes/${encodeURIComponent(QR_CODE)}/validate`);
+      if (res.ok) {
+        const data = await res.json();
+        const badgeEl = document.getElementById('agencyBadgeText');
+        if (badgeEl && data.agence_nom) {
+          badgeEl.textContent = data.agence_nom;
+        }
+        if (data.agence_nom) {
+          document.title = `Avis — ${data.agence_nom}`;
+        }
+      }
+    } catch (e) {
+      console.warn("Info agence:", e);
+    }
+  }
+  refreshAgency();
+
+  let currentScreen = 'screen-welcome';
+  let sentimentSelectionne: 'negatif' | 'neutre' | 'positif' | null = null;
+
+  const globalBackBtn = document.getElementById('globalBackBtn')!;
+
+  // Écrans
+  const screens = {
+    welcome: document.getElementById('screen-welcome')!,
+    sentiment: document.getElementById('screen-sentiment')!,
+    idea: document.getElementById('screen-idea')!,
+    success: document.getElementById('screen-success')!,
+  };
+
+  function switchScreen(target: 'welcome' | 'sentiment' | 'idea' | 'success') {
+    currentScreen = target;
+    Object.keys(screens).forEach(key => {
+      const el = screens[key as keyof typeof screens];
+      if (el) el.style.display = key === target ? 'block' : 'none';
+    });
+
+    if (globalBackBtn) {
+      globalBackBtn.style.display = target === 'welcome' || target === 'success' ? 'none' : 'block';
+    }
+  }
+
+  // Clics sur l'écran d'accueil
+  document.getElementById('btnChoiceSentiment')?.addEventListener('click', () => switchScreen('sentiment'));
+  document.getElementById('btnChoiceIdea')?.addEventListener('click', () => switchScreen('idea'));
+  globalBackBtn?.addEventListener('click', () => switchScreen('welcome'));
+
+  // Sélection des 3 Sentiments (Négatif, Neutre, Positif)
+  const sentimentBtns = document.querySelectorAll<HTMLButtonElement>('.sentiment-btn');
+  sentimentBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      sentimentBtns.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      sentimentSelectionne = (btn.dataset.sentiment as 'negatif' | 'neutre' | 'positif') || 'neutre';
+    });
+  });
+
+  // Radios Recontact Sentiment
+  const radioSentimentOui = document.querySelector<HTMLInputElement>('input[name="recontactSentiment"][value="oui"]');
+  const radioSentimentNon = document.querySelector<HTMLInputElement>('input[name="recontactSentiment"][value="non"]');
+  const contactFieldsSentiment = document.getElementById('contactFieldsSentiment')!;
+
+  radioSentimentOui?.addEventListener('change', () => contactFieldsSentiment.style.display = 'block');
+  radioSentimentNon?.addEventListener('change', () => contactFieldsSentiment.style.display = 'none');
+
+  // Radios Recontact Idea
+  const radioIdeaOui = document.querySelector<HTMLInputElement>('input[name="recontactIdea"][value="oui"]');
+  const radioIdeaNon = document.querySelector<HTMLInputElement>('input[name="recontactIdea"][value="non"]');
+  const contactFieldsIdea = document.getElementById('contactFieldsIdea')!;
+
+  radioIdeaOui?.addEventListener('change', () => contactFieldsIdea.style.display = 'block');
+  radioIdeaNon?.addEventListener('change', () => contactFieldsIdea.style.display = 'none');
+
+  // Envoi Formulaire Sentiment (AVIS)
+  document.getElementById('btnSubmitSentiment')?.addEventListener('click', async () => {
+    if (!sentimentSelectionne) {
+      alert("Veuillez sélectionner votre ressenti (Négatif, Neutre ou Positif).");
+      return;
+    }
+
+    const isRecontact = radioSentimentOui?.checked || false;
+    const contactTel = (document.getElementById('contactTelSentiment') as HTMLInputElement)?.value.trim() || null;
+    const contactEmail = (document.getElementById('contactEmailSentiment') as HTMLInputElement)?.value.trim() || null;
+
+    if (isRecontact && !contactTel && !contactEmail) {
+      alert("Veuillez renseigner votre numéro de téléphone ou votre adresse e-mail afin que nous puissions vous recontacter.");
+      return;
+    }
+
+    const btn = document.getElementById('btnSubmitSentiment') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = 'Envoi de votre avis...';
+
+    const commentaire = (document.getElementById('inputCommentaire') as HTMLTextAreaElement).value.trim();
+
+    // Correspondance avec le modèle de données : 1 = Négatif, 3 = Neutre, 5 = Positif
+    const noteValeur = sentimentSelectionne === 'negatif' ? 1 : sentimentSelectionne === 'positif' ? 5 : 3;
+
+    const payload: any = {
+      sentiment: sentimentSelectionne,
+      note: noteValeur,
+      commentaire: commentaire || null,
+      suggestion: null,
+      souhaite_etre_rappele: isRecontact,
+      contact_nom: null,
+      contact_telephone: isRecontact ? contactTel : null,
+      contact_email: isRecontact ? contactEmail : null,
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/feedbacks/?qr_code=${encodeURIComponent(QR_CODE)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        switchScreen('success');
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(`Erreur lors de l'envoi : ${errData.detail || 'Code QR invalide'}`);
+        btn.disabled = false;
+        btn.innerHTML = '<span>Envoyer</span><span class="arrow">›</span>';
+      }
+    } catch (e) {
+      console.error("Erreur d'envoi feedback:", e);
+      alert("Erreur de connexion avec le serveur API. Veuillez réessayer.");
+      btn.disabled = false;
+      btn.innerHTML = '<span>Envoyer</span><span class="arrow">›</span>';
+    }
+  });
+
+  // Envoi Formulaire Idée (SUGGESTION)
+  document.getElementById('btnSubmitIdea')?.addEventListener('click', async () => {
+    const ideaText = (document.getElementById('inputIdea') as HTMLTextAreaElement).value.trim();
+    if (!ideaText) {
+      alert("Veuillez saisir votre idée ou suggestion.");
+      return;
+    }
+
+    const isRecontact = radioIdeaOui?.checked || false;
+    const contactTel = (document.getElementById('contactTelIdea') as HTMLInputElement)?.value.trim() || null;
+    const contactEmail = (document.getElementById('contactEmailIdea') as HTMLInputElement)?.value.trim() || null;
+
+    if (isRecontact && !contactTel && !contactEmail) {
+      alert("Veuillez renseigner votre numéro de téléphone ou votre adresse e-mail afin que nous puissions vous recontacter.");
+      return;
+    }
+
+    const btn = document.getElementById('btnSubmitIdea') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = 'Envoi de votre idée...';
+
+    const payload: any = {
+      sentiment: 'neutre',
+      note: 3, // Valeur neutre par défaut pour les idées, analysée par le modèle IA
+      commentaire: null,
+      suggestion: ideaText,
+      souhaite_etre_rappele: isRecontact,
+      contact_nom: null,
+      contact_telephone: isRecontact ? contactTel : null,
+      contact_email: isRecontact ? contactEmail : null,
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/feedbacks/?qr_code=${encodeURIComponent(QR_CODE)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        switchScreen('success');
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(`Erreur lors de l'envoi : ${errData.detail || 'Code QR invalide'}`);
+        btn.disabled = false;
+        btn.innerHTML = '<span>Envoyer</span><span class="arrow">›</span>';
+      }
+    } catch (e) {
+      console.error("Erreur d'envoi suggestion:", e);
+      alert("Erreur de connexion avec le serveur API. Veuillez réessayer.");
+      btn.disabled = false;
+      btn.innerHTML = '<span>Envoyer</span><span class="arrow">›</span>';
+    }
+  });
+</script>
