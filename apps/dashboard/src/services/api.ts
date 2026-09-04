@@ -1,10 +1,15 @@
-/**
- * Service API — axios instance avec gestion des erreurs et base URL.
- */
 import axios from 'axios';
 
+const isLocal = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.startsWith('192.168.')
+);
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || (isLocal ? '/api/v1' : 'https://ikanai-api.onrender.com/api/v1');
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: API_BASE_URL,
   withCredentials: true, // Envoie les cookies HTTP-only
   headers: {
     'Content-Type': 'application/json',
