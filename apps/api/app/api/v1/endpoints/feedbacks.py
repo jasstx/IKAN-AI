@@ -7,7 +7,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 logger = logging.getLogger(__name__)
 
@@ -185,9 +185,15 @@ def list_feedbacks(
     Liste les feedbacks pour CX Manager et Agency Manager uniquement.
     Exclusion stricte du rôle ADMIN (403).
     """
-    # Base query avec jointures pour filtrer par organisation
+    # Base query avec eager loading (joinedload) pour charger toutes les relations en 1 seule requête SQL
     query = (
         db.query(Feedback)
+        .options(
+            joinedload(Feedback.analyse_ia),
+            joinedload(Feedback.demande_contact),
+            joinedload(Feedback.suggestion),
+            joinedload(Feedback.qr_code).joinedload(QRCode.agence),
+        )
         .join(QRCode, Feedback.qr_code_id == QRCode.id)
     )
 

@@ -5,7 +5,7 @@ from uuid import UUID
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, timezone
 
 from app.api.deps import get_cx_or_agency_manager, get_db
@@ -23,10 +23,12 @@ def list_suggestions(
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
     """Liste les suggestions (CX Manager / Agency Manager uniquement, Admin exclu)."""
-    query = db.query(Suggestion)
-
     from app.models.feedback import Feedback
     from app.models.qr_code import QRCode
+
+    query = db.query(Suggestion).options(
+        joinedload(Suggestion.feedback).joinedload(Feedback.qr_code).joinedload(QRCode.agence)
+    )
 
     if current_user.role == UserRole.AGENCY_MANAGER:
         query = (
