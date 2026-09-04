@@ -1,7 +1,8 @@
 """
-Endpoints Feedbacks — soumission par les clients (anonyme) et consultation par les managers.
+Endpoints Feedbacks — soumission par les clients (anonyme) et workflow de traitement Closed-Loop (RBAC strict).
 """
 import logging
+import uuid
 from uuid import UUID
 from typing import List, Optional
 from datetime import datetime
@@ -20,13 +21,50 @@ from app.api.deps import (
 from app.models.utilisateur import Utilisateur
 from app.models.feedback import Feedback
 from app.models.qr_code import QRCode
+from app.models.agence import Agence
 from app.models.suggestion import Suggestion
 from app.models.demande_contact import DemandeContact
+from app.models.historique_feedback import HistoriqueFeedback
+from app.models.reponse_client import ReponseClient
 from app.models.enums import UserRole
-from app.schemas.feedback import FeedbackCreate, FeedbackResponse
+from app.schemas.feedback import (
+    FeedbackCreate,
+    FeedbackResponse,
+    HistoriqueFeedbackResponse,
+    ReponseClientResponse,
+    NoteInterneCreate,
+    SuggestionAgenceCreate,
+    ActionCXCreate,
+    ReponseClientCreate,
+)
 from app.services.ai.analyse_service import analyser_feedback
+from app.core.config import settings
 
 router = APIRouter()
+
+
+def _format_feedback_response(f: Feedback) -> FeedbackResponse:
+    """Transforme une entité Feedback SQLAlchemy en schéma Pydantic FeedbackResponse complet."""
+    res = FeedbackResponse.model_validate(f)
+    if f.qr_code and f.qr_code.agence:
+        res.agence_id = f.qr_code.agence_id
+        res.agence_nom = f.qr_code.agence.nom
+    if f.assigne_a:
+        res.assigne_a_nom = f"{f.assigne_a.prenom} {f.assigne_a.nom}"
+    return res
+
+
+def _check_feedback_access(feedback: Feedback, user: Utilisateur) -> None:
+    """Vérifie que l'utilisateur a accès au feedback selon son périmètre RBAC."""
+    if not feedback.qr_code:
+        return
+    if user.role == UserRole.AGENCY_MANAGER:
+        if feedback.qr_code.agence_id != user.agence_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé à ce feedback hors de votre agence")
+    elif user.role == UserRole.CX_MANAGER:
+        if user.organisation_id and feedback.qr_code.agence:
+            if feedback.qr_code.agence.organisation_id != user.organisation_id:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé à ce feedback hors de votre organisation")
 
 
 @router.post("/", response_model=FeedbackResponse, status_code=status.HTTP_201_CREATED)
@@ -38,10 +76,8 @@ def submit_feedback(
 ):
     """
     Soumet un feedback client — endpoint PUBLIC (pas d'authentification requise).
-    Déclenche l'analyse IA en tâche de fond.
-    BF-01, BF-02, BF-03, BF-04, BF-05
+    Déclenche l'analyse IA synchrone.
     """
-    # Valider le QR code (case-insensitive + fallback agence_id)
     from sqlalchemy import func
     clean_code = qr_code.strip()
     qr = db.query(QRCode).filter(
@@ -72,7 +108,6 @@ def submit_feedback(
                     db.refresh(qr)
         except ValueError:
             pass
-        # 3. Si non trouvé, chercher par nom d'agence ou ville
         if not qr:
             agence = db.query(Agence).filter(
                 (func.lower(Agence.nom).ilike(f"%{clean_code.lower()}%")) |
@@ -80,27 +115,11 @@ def submit_feedback(
             ).first()
             if agence:
                 qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
-                if not qr:
-                    base_url = settings.PUBLIC_CLIENT_URL.rstrip("/")
-                    clean_name = agence.nom.upper().replace(" ", "-")[:12]
-                    code_str = f"QR-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
-                    qr = QRCode(
-                        id=uuid.uuid4(),
-                        agence_id=agence.id,
-                        code=code_str,
-                        url=f"{base_url}/feedback/{code_str}",
-                        label=f"Borne Accueil - {agence.nom}",
-                        actif=True
-                    )
-                    db.add(qr)
-                    db.commit()
-                    db.refresh(qr)
 
         if not qr:
             raise HTTPException(status_code=404, detail=f"QR Code ou Agence '{clean_code}' invalide ou inactif")
 
     try:
-        # Résoudre la note à partir du sentiment si note non fournie
         note_val = data.note
         if note_val is None:
             if data.sentiment:
@@ -114,16 +133,15 @@ def submit_feedback(
             else:
                 note_val = 3
 
-        # Créer le feedback
         feedback = Feedback(
             qr_code_id=qr.id,
             note=note_val,
             commentaire=data.commentaire,
+            statut_traitement="nouveau",
         )
         db.add(feedback)
-        db.flush()  # Obtenir l'ID sans commit
+        db.flush()
 
-        # Ajouter la suggestion si fournie (BF-04)
         if data.suggestion:
             suggestion = Suggestion(
                 feedback_id=feedback.id,
@@ -131,7 +149,6 @@ def submit_feedback(
             )
             db.add(suggestion)
 
-        # Ajouter la demande de contact si fournie
         if data.souhaite_etre_rappele or data.contact_email:
             contact = DemandeContact(
                 feedback_id=feedback.id,
@@ -142,10 +159,23 @@ def submit_feedback(
             )
             db.add(contact)
 
+        # Événement initial d'historique
+        hist_init = HistoriqueFeedback(
+            feedback_id=feedback.id,
+            auteur_nom="Client (Borne)",
+            auteur_role="client",
+            agence_nom=qr.agence.nom if qr.agence else None,
+            type_evenement="soumission",
+            ancien_statut=None,
+            nouveau_statut="nouveau",
+            details=f"Feedback soumis (Note {note_val}/5)",
+        )
+        db.add(hist_init)
+
         db.commit()
         db.refresh(feedback)
 
-        # Analyse IA immédiate (sentiment, thème, criticité, discordance, recommandations)
+        # Analyse IA synchrone
         try:
             analyser_feedback(feedback.id, db)
             db.expire_all()
@@ -153,21 +183,15 @@ def submit_feedback(
         except Exception as ai_err:
             logger.error(f"Erreur lors de l'analyse IA synchrone du feedback {feedback.id}: {ai_err}")
 
-        res_item = FeedbackResponse.model_validate(feedback)
-        res_item.agence_id = qr.agence_id
-        res_item.agence_nom = qr.agence.nom if (qr and qr.agence) else "Agence"
-
-        return res_item
+        return _format_feedback_response(feedback)
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
-        import traceback
-        err_trace = traceback.format_exc()
-        print(f"[SUBMIT FEEDBACK ERROR] {err_trace}")
+        logger.error(f"Erreur submit_feedback: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur serveur submit_feedback: {str(e)} | Trace: {err_trace[-300:]}"
+            detail=f"Erreur serveur submit_feedback: {str(e)}"
         )
 
 
@@ -176,33 +200,31 @@ def list_feedbacks(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_feedback_viewer_user),
     agence_id: Optional[UUID] = Query(None),
+    statut: Optional[str] = Query(None),
     date_debut: Optional[datetime] = Query(None),
     date_fin: Optional[datetime] = Query(None),
-    limit: int = Query(50, le=1000),
+    limit: int = Query(250, le=1000),
     offset: int = Query(0),
 ):
     """
-    Liste les feedbacks pour CX Manager et Agency Manager uniquement.
-    Exclusion stricte du rôle ADMIN (403).
+    Liste les feedbacks pour CX Manager et Agency Manager.
+    Périmètre filtré strictement côté backend selon le RBAC.
     """
-    # Base query avec eager loading (joinedload) pour charger toutes les relations en 1 seule requête SQL
     query = (
         db.query(Feedback)
         .options(
             joinedload(Feedback.analyse_ia),
             joinedload(Feedback.demande_contact),
             joinedload(Feedback.suggestion),
+            joinedload(Feedback.assigne_a),
             joinedload(Feedback.qr_code).joinedload(QRCode.agence),
         )
         .join(QRCode, Feedback.qr_code_id == QRCode.id)
     )
 
     if current_user.role == UserRole.AGENCY_MANAGER:
-        # Ne voit que les feedbacks de son agence
         query = query.filter(QRCode.agence_id == current_user.agence_id)
     elif current_user.role == UserRole.CX_MANAGER:
-        # Voit les feedbacks des agences de son organisation
-        from app.models.agence import Agence
         if current_user.organisation_id:
             query = query.join(Agence, QRCode.agence_id == Agence.id).filter(
                 Agence.organisation_id == current_user.organisation_id
@@ -210,6 +232,8 @@ def list_feedbacks(
         if agence_id:
             query = query.filter(QRCode.agence_id == agence_id)
 
+    if statut:
+        query = query.filter(Feedback.statut_traitement == statut)
     if date_debut:
         query = query.filter(Feedback.date_soumission >= date_debut)
     if date_fin:
@@ -217,26 +241,7 @@ def list_feedbacks(
 
     feedbacks = query.order_by(Feedback.date_soumission.desc()).offset(offset).limit(limit).all()
 
-    response_list = []
-    for f in feedbacks:
-        item = FeedbackResponse.model_validate(f)
-        if f.qr_code and f.qr_code.agence:
-            item.agence_id = f.qr_code.agence_id
-            item.agence_nom = f.qr_code.agence.nom
-
-        fid = str(f.id)
-        if fid in TREATMENT_STORE:
-            item.statut_traitement = TREATMENT_STORE[fid].get("statut", "nouveau")
-            item.notes_internes = TREATMENT_STORE[fid].get("notes", [])
-            item.discordance_status = TREATMENT_STORE[fid].get("discordance")
-        else:
-            item.statut_traitement = "nouveau"
-            item.notes_internes = []
-            item.discordance_status = None
-
-        response_list.append(item)
-
-    return response_list
+    return [_format_feedback_response(f) for f in feedbacks]
 
 
 @router.get("/{feedback_id}", response_model=FeedbackResponse)
@@ -245,12 +250,24 @@ def get_feedback(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_feedback_viewer_user),
 ):
-    """Obtient un feedback par ID (CX Manager / Agency Manager)."""
-    feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    """Obtient le détail d'un feedback avec son statut et ses relations."""
+    feedback = (
+        db.query(Feedback)
+        .options(
+            joinedload(Feedback.analyse_ia),
+            joinedload(Feedback.demande_contact),
+            joinedload(Feedback.suggestion),
+            joinedload(Feedback.assigne_a),
+            joinedload(Feedback.qr_code).joinedload(QRCode.agence),
+        )
+        .filter(Feedback.id == feedback_id)
+        .first()
+    )
     if not feedback:
         raise HTTPException(status_code=404, detail="Feedback introuvable")
 
-    # Auto-analyse si manquante
+    _check_feedback_access(feedback, current_user)
+
     if not feedback.analyse_ia:
         try:
             analyser_feedback(feedback.id, db)
@@ -258,21 +275,364 @@ def get_feedback(
         except Exception as e:
             logger.warning(f"Auto-analyse fallback pour feedback {feedback.id}: {e}")
 
-    # Vérification d'accès
-    qr = db.query(QRCode).filter(QRCode.id == feedback.qr_code_id).first()
-    if current_user.role == UserRole.AGENCY_MANAGER and qr.agence_id != current_user.agence_id:
-        raise HTTPException(status_code=403, detail="Accès refusé")
-
-    item = FeedbackResponse.model_validate(feedback)
-    if qr and qr.agence:
-        item.agence_id = qr.agence_id
-        item.agence_nom = qr.agence.nom
-
-    return item
+    return _format_feedback_response(feedback)
 
 
-# Stockage in-memory persistant pendant le runtime pour le traitement des feedbacks
-TREATMENT_STORE: dict[str, dict] = {}
+@router.post("/{feedback_id}/open", response_model=FeedbackResponse)
+def open_feedback(
+    feedback_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """
+    Action automatique lors de l'ouverture du feedback dans la modale :
+    Si le statut est 'nouveau', passe automatiquement à 'en_traitement',
+    assigne le feedback à l'utilisateur connecté et enregistre l'événement dans l'historique.
+    """
+    feedback = (
+        db.query(Feedback)
+        .options(
+            joinedload(Feedback.analyse_ia),
+            joinedload(Feedback.demande_contact),
+            joinedload(Feedback.qr_code).joinedload(QRCode.agence),
+            joinedload(Feedback.assigne_a),
+        )
+        .filter(Feedback.id == feedback_id)
+        .first()
+    )
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback introuvable")
+
+    _check_feedback_access(feedback, current_user)
+
+    # Transition automatique Nouveau -> En traitement
+    if feedback.statut_traitement == "nouveau":
+        feedback.statut_traitement = "en_traitement"
+        feedback.assigne_a_id = current_user.id
+        feedback.date_assignation = datetime.now()
+
+        hist = HistoriqueFeedback(
+            feedback_id=feedback.id,
+            utilisateur_id=current_user.id,
+            auteur_nom=f"{current_user.prenom} {current_user.nom}",
+            auteur_role=current_user.role.value,
+            agence_nom=feedback.qr_code.agence.nom if (feedback.qr_code and feedback.qr_code.agence) else None,
+            type_evenement="ouverture",
+            ancien_statut="nouveau",
+            nouveau_statut="en_traitement",
+            details="Feedback ouvert pour prise en charge",
+        )
+        db.add(hist)
+        db.commit()
+        db.refresh(feedback)
+
+    return _format_feedback_response(feedback)
+
+
+@router.post("/{feedback_id}/notes", response_model=FeedbackResponse)
+def add_note_interne(
+    feedback_id: UUID,
+    data: NoteInterneCreate,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """
+    Ajoute un commentaire / note interne confidentielle.
+    Enregistré dans l'historique d'audit horodaté.
+    """
+    feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback introuvable")
+
+    _check_feedback_access(feedback, current_user)
+
+    hist = HistoriqueFeedback(
+        feedback_id=feedback.id,
+        utilisateur_id=current_user.id,
+        auteur_nom=f"{current_user.prenom} {current_user.nom}",
+        auteur_role=current_user.role.value,
+        agence_nom=feedback.qr_code.agence.nom if (feedback.qr_code and feedback.qr_code.agence) else None,
+        type_evenement="note_interne",
+        ancien_statut=feedback.statut_traitement,
+        nouveau_statut=feedback.statut_traitement,
+        details=data.texte.strip(),
+    )
+    db.add(hist)
+    db.commit()
+    db.refresh(feedback)
+
+    return _format_feedback_response(feedback)
+
+
+@router.post("/{feedback_id}/suggestion-agence", response_model=FeedbackResponse)
+def envoyer_suggestion_agence(
+    feedback_id: UUID,
+    data: SuggestionAgenceCreate,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """
+    Agency Manager : Propose une solution / suggestion d'amélioration au CX Manager.
+    Le statut reste 'en_traitement' et l'événement est tracé dans l'historique.
+    """
+    if current_user.role != UserRole.AGENCY_MANAGER and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Seul un Agency Manager peut soumettre une suggestion au CX")
+
+    feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback introuvable")
+
+    _check_feedback_access(feedback, current_user)
+
+    now = datetime.now()
+    auteur = f"{current_user.prenom} {current_user.nom}"
+    feedback.suggestion_agence = data.suggestion.strip()
+    feedback.suggestion_agence_auteur = auteur
+    feedback.suggestion_agence_date = now
+
+    hist = HistoriqueFeedback(
+        feedback_id=feedback.id,
+        utilisateur_id=current_user.id,
+        auteur_nom=auteur,
+        auteur_role=current_user.role.value,
+        agence_nom=feedback.qr_code.agence.nom if (feedback.qr_code and feedback.qr_code.agence) else None,
+        type_evenement="suggestion_envoyee",
+        ancien_statut=feedback.statut_traitement,
+        nouveau_statut=feedback.statut_traitement,
+        details=data.suggestion.strip(),
+    )
+    db.add(hist)
+    db.commit()
+    db.refresh(feedback)
+
+    return _format_feedback_response(feedback)
+
+
+@router.post("/{feedback_id}/action-cx", response_model=FeedbackResponse)
+def definir_action_cx(
+    feedback_id: UUID,
+    data: ActionCXCreate,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """
+    CX Manager uniquement : Définit l'action corrective à entreprendre.
+    Transition automatique du statut : En traitement -> En cours.
+    Trace l'action dans l'historique.
+    """
+    if current_user.role != UserRole.CX_MANAGER and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Seul le CX Manager peut définir une Action à prendre")
+
+    feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback introuvable")
+
+    _check_feedback_access(feedback, current_user)
+
+    ancien_statut = feedback.statut_traitement
+    feedback.action_a_prendre = data.action.strip()
+    feedback.action_realisee = False
+    feedback.statut_traitement = "en_cours"
+
+    hist = HistoriqueFeedback(
+        feedback_id=feedback.id,
+        utilisateur_id=current_user.id,
+        auteur_nom=f"{current_user.prenom} {current_user.nom}",
+        auteur_role=current_user.role.value,
+        agence_nom=feedback.qr_code.agence.nom if (feedback.qr_code and feedback.qr_code.agence) else None,
+        type_evenement="action_definie",
+        ancien_statut=ancien_statut,
+        nouveau_statut="en_cours",
+        details=data.action.strip(),
+    )
+    db.add(hist)
+    db.commit()
+    db.refresh(feedback)
+
+    return _format_feedback_response(feedback)
+
+
+@router.post("/{feedback_id}/confirmer-action", response_model=FeedbackResponse)
+def confirmer_action_realisee(
+    feedback_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """
+    CX Manager uniquement : Confirme que l'action a été réalisée sur le terrain.
+    Transition automatique du statut : En cours -> Résolu.
+    Trace la résolution dans l'historique.
+    """
+    if current_user.role != UserRole.CX_MANAGER and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Seul le CX Manager peut confirmer une action et résoudre un feedback")
+
+    feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback introuvable")
+
+    _check_feedback_access(feedback, current_user)
+
+    ancien_statut = feedback.statut_traitement
+    feedback.action_realisee = True
+    feedback.statut_traitement = "resolu"
+    feedback.date_resolution = datetime.now()
+
+    hist = HistoriqueFeedback(
+        feedback_id=feedback.id,
+        utilisateur_id=current_user.id,
+        auteur_nom=f"{current_user.prenom} {current_user.nom}",
+        auteur_role=current_user.role.value,
+        agence_nom=feedback.qr_code.agence.nom if (feedback.qr_code and feedback.qr_code.agence) else None,
+        type_evenement="action_realisee",
+        ancien_statut=ancien_statut,
+        nouveau_statut="resolu",
+        details=feedback.action_a_prendre or "Action corrective réalisée sur le terrain",
+    )
+    db.add(hist)
+    db.commit()
+    db.refresh(feedback)
+
+    return _format_feedback_response(feedback)
+
+
+@router.post("/{feedback_id}/reponses-client", response_model=List[ReponseClientResponse])
+def envoyer_reponse_client(
+    feedback_id: UUID,
+    data: ReponseClientCreate,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """
+    Enregistre une réponse adressée au client (Téléphone, Email, WhatsApp, SMS).
+    Inscrit la réponse dans le fil de conversation et dans l'historique d'audit.
+    """
+    feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback introuvable")
+
+    _check_feedback_access(feedback, current_user)
+
+    auteur = f"{current_user.prenom} {current_user.nom}"
+    reponse = ReponseClient(
+        feedback_id=feedback.id,
+        utilisateur_id=current_user.id,
+        auteur_nom=auteur,
+        auteur_role=current_user.role.value,
+        canal=data.canal,
+        contenu=data.contenu.strip(),
+    )
+    db.add(reponse)
+
+    # Si c'était une demande de rappel, marquer comme traitée
+    if feedback.demande_contact:
+        feedback.demande_contact.traitee = True
+
+    # Ajouter à l'historique d'audit
+    hist = HistoriqueFeedback(
+        feedback_id=feedback.id,
+        utilisateur_id=current_user.id,
+        auteur_nom=auteur,
+        auteur_role=current_user.role.value,
+        agence_nom=feedback.qr_code.agence.nom if (feedback.qr_code and feedback.qr_code.agence) else None,
+        type_evenement="reponse_client",
+        ancien_statut=feedback.statut_traitement,
+        nouveau_statut=feedback.statut_traitement,
+        details=f"[{data.canal.upper()}] {data.contenu.strip()}",
+    )
+    db.add(hist)
+
+    db.commit()
+
+    all_reponses = (
+        db.query(ReponseClient)
+        .filter(ReponseClient.feedback_id == feedback_id)
+        .order_by(ReponseClient.date_envoi.asc())
+        .all()
+    )
+    return all_reponses
+
+
+@router.post("/{feedback_id}/reouvrir", response_model=FeedbackResponse)
+def reouvrir_feedback(
+    feedback_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """
+    Réouverture d'un feedback résolu suite à un nouveau signalement client.
+    Transition : Résolu -> En traitement (conserve l'intégralité de l'historique).
+    """
+    feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback introuvable")
+
+    _check_feedback_access(feedback, current_user)
+
+    ancien_statut = feedback.statut_traitement
+    feedback.statut_traitement = "en_traitement"
+    feedback.action_realisee = False
+    feedback.date_resolution = None
+
+    hist = HistoriqueFeedback(
+        feedback_id=feedback.id,
+        utilisateur_id=current_user.id,
+        auteur_nom=f"{current_user.prenom} {current_user.nom}",
+        auteur_role=current_user.role.value,
+        agence_nom=feedback.qr_code.agence.nom if (feedback.qr_code and feedback.qr_code.agence) else None,
+        type_evenement="reouverture",
+        ancien_statut=ancien_statut,
+        nouveau_statut="en_traitement",
+        details="Feedback rouvert suite à un nouveau signalement client",
+    )
+    db.add(hist)
+    db.commit()
+    db.refresh(feedback)
+
+    return _format_feedback_response(feedback)
+
+
+@router.get("/{feedback_id}/historique", response_model=List[HistoriqueFeedbackResponse])
+def get_historique(
+    feedback_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_feedback_viewer_user),
+):
+    """Retourne l'historique complet et horodaté des actions et transitions de statut."""
+    feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback introuvable")
+
+    _check_feedback_access(feedback, current_user)
+
+    historique = (
+        db.query(HistoriqueFeedback)
+        .filter(HistoriqueFeedback.feedback_id == feedback_id)
+        .order_by(HistoriqueFeedback.date_evenement.desc())
+        .all()
+    )
+    return historique
+
+
+@router.get("/{feedback_id}/reponses", response_model=List[ReponseClientResponse])
+def get_reponses(
+    feedback_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_feedback_viewer_user),
+):
+    """Retourne la conversation / réponses adressées au client."""
+    feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback introuvable")
+
+    _check_feedback_access(feedback, current_user)
+
+    reponses = (
+        db.query(ReponseClient)
+        .filter(ReponseClient.feedback_id == feedback_id)
+        .order_by(ReponseClient.date_envoi.asc())
+        .all()
+    )
+    return reponses
 
 
 @router.patch("/demandes-contact/{contact_id}/traiter")
@@ -281,76 +641,10 @@ def marquer_demande_contact_traitee(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
-    """Marque une demande de contact client comme traitée (CX Manager / Agency Manager)."""
+    """Marque une demande de contact client comme traitée."""
     dc = db.query(DemandeContact).filter(DemandeContact.id == contact_id).first()
     if not dc:
         raise HTTPException(status_code=404, detail="Demande de contact introuvable")
     dc.traitee = True
     db.commit()
     return {"message": "Demande de contact marquée comme traitée"}
-
-
-@router.patch("/{feedback_id}/statut")
-def update_feedback_statut(
-    feedback_id: UUID,
-    payload: dict,
-    db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
-):
-    """Met à jour le statut de traitement d'un feedback ('nouveau', 'en_cours', 'recontacte', 'resolu', 'escalade')."""
-    fid = str(feedback_id)
-    if fid not in TREATMENT_STORE:
-        TREATMENT_STORE[fid] = {"statut": "nouveau", "notes": [], "discordance": None}
-    
-    statut = payload.get("statut", "en_cours")
-    TREATMENT_STORE[fid]["statut"] = statut
-    return {"message": "Statut mis à jour avec succès", "statut": statut}
-
-
-@router.post("/{feedback_id}/notes-internes")
-def add_note_interne(
-    feedback_id: UUID,
-    payload: dict,
-    db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
-):
-    """Ajoute une note interne confidentielle au journal du feedback."""
-    fid = str(feedback_id)
-    if fid not in TREATMENT_STORE:
-        TREATMENT_STORE[fid] = {"statut": "nouveau", "notes": [], "discordance": None}
-
-    texte = payload.get("texte", "").strip()
-    if not texte:
-        raise HTTPException(status_code=400, detail="Le texte de la note ne peut pas être vide")
-
-    auteur_nom = payload.get("auteur") or f"{current_user.prenom} {current_user.nom}"
-    note_item = {
-        "id": f"note-{datetime.now().timestamp()}",
-        "date": datetime.now().isoformat(),
-        "auteur": auteur_nom,
-        "texte": texte,
-    }
-    TREATMENT_STORE[fid]["notes"].append(note_item)
-    # Passer en 'en_cours' automatiquement si encore 'nouveau'
-    if TREATMENT_STORE[fid]["statut"] == "nouveau":
-        TREATMENT_STORE[fid]["statut"] = "en_cours"
-
-    return {"message": "Note interne ajoutée", "note": note_item, "statut": TREATMENT_STORE[fid]["statut"]}
-
-
-@router.patch("/{feedback_id}/discordance")
-def update_discordance_status(
-    feedback_id: UUID,
-    payload: dict,
-    db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
-):
-    """Met à jour le statut de la discordance IA ('confirmee' ou 'traitee_faux_positif')."""
-    fid = str(feedback_id)
-    if fid not in TREATMENT_STORE:
-        TREATMENT_STORE[fid] = {"statut": "nouveau", "notes": [], "discordance": None}
-
-    status_val = payload.get("status", "confirmee")
-    TREATMENT_STORE[fid]["discordance"] = status_val
-    return {"message": "Statut discordance mis à jour", "discordance_status": status_val}
-

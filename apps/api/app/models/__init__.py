@@ -20,6 +20,8 @@ from app.models.recommandation import Recommandation
 from app.models.historique_action import HistoriqueAction
 from app.models.demande_contact import DemandeContact
 from app.models.system_settings import SystemSettings
+from app.models.historique_feedback import HistoriqueFeedback
+from app.models.reponse_client import ReponseClient
 
 __all__ = [
     # Enums
@@ -41,4 +43,6 @@ __all__ = [
     "HistoriqueAction",
     "DemandeContact",
     "SystemSettings",
+    "HistoriqueFeedback",
+    "ReponseClient",
 ]

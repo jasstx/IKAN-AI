@@ -63,16 +63,30 @@ export const statisticsApi = {
 
 // ── Feedbacks ─────────────────────────────────────────
 export const feedbacksApi = {
-  list: (params?: { agence_id?: string; limit?: number; offset?: number }) =>
+  list: (params?: { agence_id?: string; statut?: string; limit?: number; offset?: number }) =>
     api.get('/feedbacks/', { params }),
+  get: (feedbackId: string) =>
+    api.get(`/feedbacks/${feedbackId}`),
+  open: (feedbackId: string) =>
+    api.post(`/feedbacks/${feedbackId}/open`),
+  addNote: (feedbackId: string, texte: string) =>
+    api.post(`/feedbacks/${feedbackId}/notes`, { texte }),
+  envoyerSuggestionAgence: (feedbackId: string, suggestion: string) =>
+    api.post(`/feedbacks/${feedbackId}/suggestion-agence`, { suggestion }),
+  definirActionCX: (feedbackId: string, action: string) =>
+    api.post(`/feedbacks/${feedbackId}/action-cx`, { action }),
+  confirmerActionRealisee: (feedbackId: string) =>
+    api.post(`/feedbacks/${feedbackId}/confirmer-action`),
+  envoyerReponseClient: (feedbackId: string, contenu: string, canal: string = 'telephone') =>
+    api.post(`/feedbacks/${feedbackId}/reponses-client`, { contenu, canal }),
+  reouvrir: (feedbackId: string) =>
+    api.post(`/feedbacks/${feedbackId}/reouvrir`),
+  getHistorique: (feedbackId: string) =>
+    api.get<import('../types').HistoriqueFeedback[]>(`/feedbacks/${feedbackId}/historique`),
+  getReponses: (feedbackId: string) =>
+    api.get<import('../types').ReponseClient[]>(`/feedbacks/${feedbackId}/reponses`),
   traiterDemandeContact: (contactId: string) =>
     api.patch(`/feedbacks/demandes-contact/${contactId}/traiter`),
-  updateStatut: (feedbackId: string, statut: string) =>
-    api.patch(`/feedbacks/${feedbackId}/statut`, { statut }),
-  addNoteInterne: (feedbackId: string, texte: string, auteur?: string) =>
-    api.post(`/feedbacks/${feedbackId}/notes-internes`, { texte, auteur }),
-  updateDiscordance: (feedbackId: string, status: string) =>
-    api.patch(`/feedbacks/${feedbackId}/discordance`, { status }),
 };
 
 // ── Suggestions ───────────────────────────────────────

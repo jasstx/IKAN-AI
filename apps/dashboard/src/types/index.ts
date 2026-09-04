@@ -49,7 +49,32 @@ export interface Agence {
   qr_code_url?: string;
 }
 
-export type StatutTraitement = 'nouveau' | 'en_cours' | 'recontacte' | 'resolu' | 'escalade';
+export type StatutTraitement = 'nouveau' | 'en_traitement' | 'en_cours' | 'resolu';
+
+export interface HistoriqueFeedback {
+  id: string;
+  feedback_id: string;
+  utilisateur_id?: string;
+  auteur_nom: string;
+  auteur_role: string;
+  agence_nom?: string;
+  type_evenement: string;
+  ancien_statut?: string;
+  nouveau_statut?: string;
+  details?: string;
+  date_evenement: string;
+}
+
+export interface ReponseClient {
+  id: string;
+  feedback_id: string;
+  utilisateur_id?: string;
+  auteur_nom: string;
+  auteur_role: string;
+  canal: 'telephone' | 'email' | 'whatsapp' | 'sms' | string;
+  contenu: string;
+  date_envoi: string;
+}
 
 export interface NoteInterne {
   id: string;
@@ -76,6 +101,15 @@ export interface Feedback {
   commentaire?: string;
   date_soumission: string;
   statut_traitement?: StatutTraitement;
+  assigne_a_id?: string;
+  assigne_a_nom?: string;
+  date_assignation?: string;
+  date_resolution?: string;
+  action_a_prendre?: string;
+  action_realisee?: boolean;
+  suggestion_agence?: string;
+  suggestion_agence_auteur?: string;
+  suggestion_agence_date?: string;
   notes_internes?: NoteInterne[];
   discordance_status?: 'detectee' | 'confirmee' | 'traitee_faux_positif';
   analyse_ia?: {

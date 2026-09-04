@@ -1,11 +1,11 @@
 """
-Schémas Pydantic pour les feedbacks (soumis par les clients).
+Schémas Pydantic pour les feedbacks (soumission client et workflow de traitement Closed-Loop).
 """
 from __future__ import annotations
 import uuid
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import TYPE_CHECKING, Optional
+from typing import Optional, List
 
 
 class FeedbackCreate(BaseModel):
@@ -44,16 +44,71 @@ class DemandeContactInfo(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class HistoriqueFeedbackResponse(BaseModel):
+    id: uuid.UUID
+    feedback_id: uuid.UUID
+    utilisateur_id: Optional[uuid.UUID] = None
+    auteur_nom: str
+    auteur_role: str
+    agence_nom: Optional[str] = None
+    type_evenement: str
+    ancien_statut: Optional[str] = None
+    nouveau_statut: Optional[str] = None
+    details: Optional[str] = None
+    date_evenement: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ReponseClientResponse(BaseModel):
+    id: uuid.UUID
+    feedback_id: uuid.UUID
+    utilisateur_id: Optional[uuid.UUID] = None
+    auteur_nom: str
+    auteur_role: str
+    canal: str
+    contenu: str
+    date_envoi: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class NoteInterneCreate(BaseModel):
+    texte: str = Field(..., min_length=1, max_length=2000)
+
+
+class SuggestionAgenceCreate(BaseModel):
+    suggestion: str = Field(..., min_length=3, max_length=2000)
+
+
+class ActionCXCreate(BaseModel):
+    action: str = Field(..., min_length=3, max_length=2000)
+
+
+class ReponseClientCreate(BaseModel):
+    contenu: str = Field(..., min_length=1, max_length=2000)
+    canal: str = Field("telephone", description="Canal utilisé: telephone, email, whatsapp, sms")
+
+
 class FeedbackResponse(BaseModel):
     id: uuid.UUID
     qr_code_id: uuid.UUID
     agence_id: Optional[uuid.UUID] = None
     agence_nom: Optional[str] = None
     note: int
-    commentaire: Optional[str]
+    commentaire: Optional[str] = None
     date_soumission: datetime
-    statut_traitement: Optional[str] = "nouveau"
-    notes_internes: Optional[list[dict]] = []
+    statut_traitement: str = "nouveau"
+    assigne_a_id: Optional[uuid.UUID] = None
+    assigne_a_nom: Optional[str] = None
+    date_assignation: Optional[datetime] = None
+    date_resolution: Optional[datetime] = None
+    action_a_prendre: Optional[str] = None
+    action_realisee: bool = False
+    suggestion_agence: Optional[str] = None
+    suggestion_agence_auteur: Optional[str] = None
+    suggestion_agence_date: Optional[datetime] = None
+    notes_internes: Optional[List[dict]] = []
     discordance_status: Optional[str] = None
     analyse_ia: Optional[AnalyseIAInfo] = None
     demande_contact: Optional[DemandeContactInfo] = None

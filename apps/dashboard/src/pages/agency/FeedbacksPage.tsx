@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { feedbacksApi, agencesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import type { Feedback, Agence, StatutTraitement } from '../../types';
-import FeedbackTreatmentDrawer from '../../components/feedbacks/FeedbackTreatmentDrawer';
+import FeedbackTreatmentModal from '../../components/feedbacks/FeedbackTreatmentModal';
 import PageHeader from '../../components/ui/PageHeader';
 import KpiCard from '../../components/ui/KpiCard';
 import TabsNavigation from '../../components/ui/TabsNavigation';
@@ -24,10 +24,9 @@ import {
 
 const STATUT_BADGES: Record<StatutTraitement, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
   nouveau: { label: 'Nouveau', bg: '#FEE2E2', text: '#DC2626', icon: <AlertTriangleIcon size={12} color="#DC2626" /> },
+  en_traitement: { label: 'En traitement', bg: '#E0F2FE', text: '#0369A1', icon: <ClockIcon size={12} color="#0369A1" /> },
   en_cours: { label: 'En cours', bg: '#FEF3C7', text: '#D97706', icon: <ClockIcon size={12} color="#D97706" /> },
-  recontacte: { label: 'Recontacté', bg: '#E0F2FE', text: '#0369A1', icon: <PhoneIcon size={12} color="#0369A1" /> },
   resolu: { label: 'Résolu', bg: '#EBF5E9', text: '#3C7730', icon: <CheckCircleIcon size={12} color="#3C7730" /> },
-  escalade: { label: 'Escaladé Siège', bg: '#F3E8FF', text: '#7C3AED', icon: <AlertTriangleIcon size={12} color="#7C3AED" /> },
 };
 
 const SENTIMENT_STYLE: Record<string, { bg: string; text: string; label: string; icon: React.ReactNode }> = {
@@ -582,14 +581,15 @@ export default function FeedbacksPage() {
         </div>
       )}
 
-      {/* Drawer de Traitement */}
+      {/* Modale Éphémère de Traitement SaaS */}
       {selectedFeedbackForTreatment && (
-        <FeedbackTreatmentDrawer
+        <FeedbackTreatmentModal
           feedback={selectedFeedbackForTreatment}
           isOpen={true}
           onClose={() => setSelectedFeedbackForTreatment(null)}
-          onUpdate={handleUpdateSingleFeedback}
-          isAllowedToTreat={isAllowedToTreat}
+          onUpdateFeedback={handleUpdateSingleFeedback}
+          currentUserRole={currentUser?.role}
+          currentUserName={currentUser ? `${currentUser.prenom} ${currentUser.nom}` : undefined}
         />
       )}
     </div>
