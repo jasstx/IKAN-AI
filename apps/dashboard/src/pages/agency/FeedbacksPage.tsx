@@ -59,10 +59,6 @@ const THEME_LABELS: Record<string, string> = {
   securite_confidentialite: 'Sécurité & Confidentialité',
   disponibilite_produit: 'Disponibilité Stocks / Terminaux',
   personnalisation_besoin: 'Écoute & Personnalisation',
-  digital: 'Services Digitaux',
-  infrastructure: 'Locaux & Infrastructure',
-  service: 'Qualité de Service',
-  autre: 'Autres Sujets',
 };
 
 const formatDate = (dateStr: string) => {

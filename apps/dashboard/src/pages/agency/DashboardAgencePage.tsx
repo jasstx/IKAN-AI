@@ -48,10 +48,6 @@ const THEME_LABELS: Record<string, string> = {
   securite_confidentialite: 'Sécurité & Confidentialité',
   disponibilite_produit: 'Disponibilité Stocks/Cartes',
   personnalisation_besoin: 'Écoute & Personnalisation',
-  digital: 'Services Digitaux',
-  infrastructure: 'Locaux & Propreté',
-  service: 'Qualité de Service',
-  autre: 'Autre',
 };
 
 const PRIORITE_STYLE: Record<string, { bg: string; border: string; text: string; label: string }> = {

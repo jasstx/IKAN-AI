@@ -83,10 +83,6 @@ const THEME_LABELS: Record<string, string> = {
   securite_confidentialite: "Sécurité & Confidentialité",
   disponibilite_produit: "Stock Terminaux & Accessoires",
   personnalisation_besoin: "Écoute & Personnalisation",
-  digital: "Services Digitaux",
-  infrastructure: "Locaux & Équipements",
-  service: "Qualité de Service",
-  autre: "Autres sujets",
 };
 
 const AGENCE_COLOR = (taux: number) =>
