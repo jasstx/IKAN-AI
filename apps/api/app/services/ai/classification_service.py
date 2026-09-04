@@ -24,26 +24,31 @@ def _strip_accents(text: str) -> str:
 FALLBACK_THEMES: dict[str, list[str]] = {
     "attente": [
         "attente", "attendre", "file", "queue", "delai", "delais", "retard", "lent", "lente",
-        "lenteur", "ticket", "patienter", "temps d attente", "longue attente", "chrono", "guichet plein"
+        "lenteur", "ticket", "patienter", "temps d attente", "longue attente", "chrono", "guichet plein",
+        "dure", "duree", "durer", "trop dure", "trop long", "long", "longtemps", "1h", "2h", "minutes", "minute"
     ],
     "accueil": [
         "accueil", "accueillir", "agent", "conseiller", "conseillere", "conseillers", "hote", "hotesse",
         "sourire", "souriant", "souriante", "aimable", "amabilite", "poli", "polie", "politesse",
-        "courtois", "courtoise", "courtoisie", "bonjour", "respect", "impoli", "impolie", "desagreable"
+        "courtois", "courtoise", "courtoisie", "bonjour", "respect", "impoli", "impolie", "desagreable",
+        "chaleureux", "chaleureuse", "gentil", "gentille", "bien recu", "mal recu", "personnel", "equipe",
+        "incompetent", "incompetente", "reception"
     ],
     "disponibilite_accessibilite": [
         "accessibilite", "accessible", "handicap", "handicape", "handicapee", "pmr", "fauteuil",
         "ouverture", "fermeture", "ouvert", "ferme", "fermee", "horaire", "horaires", "parking",
-        "acces", "rampe", "ascenseur", "entree"
+        "acces", "rampe", "ascenseur", "entree", "porte", "acces agence"
     ],
     "tarifs": [
         "tarif", "tarifs", "prix", "cout", "couts", "cher", "chere", "chers", "cheres",
         "frais", "commission", "commissions", "taxe", "taxes", "gratuit", "gratuite",
-        "abordable", "abordables", "promotion", "remise", "reduction", "offre tarifaire", "trop cher"
+        "abordable", "abordables", "promotion", "remise", "reduction", "offre tarifaire", "trop cher",
+        "bon tarifs", "bons tarifs", "argent", "facture elevee"
     ],
     "qualite_produit": [
         "qualite", "produit", "produits", "offre", "offres", "forfait", "forfaits", "abonnement",
-        "abonnements", "box", "carte sim", "materiel", "equipement", "gamme", "terminal", "telephone"
+        "abonnements", "box", "carte sim", "materiel", "equipement", "gamme", "terminal", "telephone",
+        "service", "prestation", "satisfait", "satisfaction", "content"
     ],
     "proprete_cadre": [
         "proprete", "propre", "propres", "sale", "sales", "salete", "saletes", "cadre",
@@ -52,53 +57,58 @@ FALLBACK_THEMES: dict[str, list[str]] = {
     ],
     "application_mobile": [
         "application", "appli", "app", "mobile", "ios", "android", "bug", "bugs",
-        "crash", "plante", "apk", "espace client", "mise a jour app", "telechargement", "play store", "app store"
+        "crash", "plante", "apk", "espace client", "mise a jour app", "telechargement", "play store", "app store",
+        "espace en ligne", "mon compte"
     ],
     "reseau": [
         "reseau", "connexion", "signal", "couverture", "4g", "5g", "3g", "fibre",
         "adsl", "wifi", "debit", "coupure", "antenne", "internet", "pas de reseau", "mauvaise connexion",
-        "perte de reseau", "ligne coupe", "debit lent"
+        "perte de reseau", "ligne coupe", "debit lent", "reseau mobile", "panne reseau"
     ],
     "facturation": [
         "facture", "factures", "facturation", "facturer", "prelevement", "prelevements", "preleve",
         "prelevee", "preleves", "prelevees", "montant", "paiement", "payer", "surfacturation", "surfacture",
-        "compte debite", "frais facture", "frais bancaires", "double debit", "echeance", "solde", "remboursement"
+        "compte debite", "frais facture", "frais bancaires", "double debit", "echeance", "solde", "remboursement",
+        "credit", "recharge"
     ],
     "communication_information": [
         "communication", "information", "informations", "informer", "explication", "explications",
-        "sms", "email", "mail", "clarte", "renseignement", "prevenir", "notification", "conseil flou"
+        "sms", "email", "mail", "clarte", "renseignement", "prevenir", "notification", "conseil flou",
+        "conseil", "conseils", "comprendre", "message"
     ],
     "livraison_logistique": [
         "livraison", "livrer", "livreur", "colis", "expedition", "expedier", "suivi colis",
-        "transporteur", "reception", "commande en cours", "paquet"
+        "transporteur", "reception", "commande en cours", "paquet", "commande", "envoi", "livre"
     ],
     "resolution_probleme": [
         "resolution", "resoudre", "probleme", "problemes", "panne", "pannes", "sav",
         "service apres-vente", "depannage", "reclamation", "reclamations", "incident", "ticket sav",
-        "reparation", "reparer", "litige"
+        "reparation", "reparer", "litige", "solution"
     ],
     "securite_confidentialite": [
         "securite", "confidentialite", "donnees", "donnees personnelles", "piratage", "pirate",
-        "fraude", "mot de passe", "password", "code secret", "otp", "usurpation", "vol", "fuite"
+        "fraude", "mot de passe", "password", "code secret", "otp", "usurpation", "vol", "fuite",
+        "code", "secret", "arnaque", "protection"
     ],
     "disponibilite_produit": [
         "rupture", "stock", "stocks", "disponible", "disponibilite", "epuise", "epuisee",
-        "indisponible", "carte sim epuisee", "reassort", "pas de stock", "plus en stock"
+        "indisponible", "carte sim epuisee", "reassort", "pas de stock", "plus en stock", "en stock"
     ],
     "personnalisation_besoin": [
         "ecoute", "besoin", "besoins", "sur-mesure", "personnalise", "personnalisee",
-        "personnalisation", "conseil adapte", "a l ecoute", "comprehension", "proposition sur mesure"
+        "personnalisation", "conseil adapte", "a l ecoute", "comprehension", "proposition sur mesure",
+        "proposition", "attentif", "adapte"
     ],
 }
 
 
 def _fallback_classifier_theme(texte: str) -> tuple[str, float]:
     """
-    Classifie le thème avec le dictionnaire de mots-clés normalisés.
+    Classifie le thème avec le dictionnaire de mots-clés normalisés parmi les 15 thèmes IKAN AI.
     Retourne (theme, confidence).
     """
     if not texte or len(texte.strip()) < 3:
-        return "autre", 0.0
+        return "accueil", 0.5
 
     texte_clean = _strip_accents(texte.lower())
     scores: dict[str, int] = {}
@@ -113,7 +123,7 @@ def _fallback_classifier_theme(texte: str) -> tuple[str, float]:
             scores[theme] = score
 
     if not scores:
-        return "autre", 0.3
+        return "accueil", 0.5
 
     best_theme = max(scores, key=lambda k: scores[k])
     total_score = sum(scores.values())
@@ -205,15 +215,15 @@ def classify(text: str) -> ClassificationResult:
     Classifie le sentiment et le thème principal d'un retour utilisateur selon les 15 catégories IKAN AI.
     Combine le modèle de Deep Learning XLM-RoBERTa et l'analyseur sémantique local pour une précision maximale.
     """
+    _ensure_models_loaded()
+
     if not text or not text.strip():
         return {
             "sentiment": "neutral",
             "score_sentiment": 0.5,
-            "theme": "autre",
-            "theme_confidence": 0.0,
+            "theme": "accueil",
+            "theme_confidence": 0.5,
         }
-
-    _ensure_models_loaded()
 
     # 1. Analyse de sentiment déterministe enrichie (rapide, sans latence réseau)
     sent_enum, score_sent = analyser_sentiment(text)
@@ -246,31 +256,25 @@ def classify(text: str) -> ClassificationResult:
             logger.debug(f"Inférence modèle Transformers ignorée : {e}")
 
     # 4. Fusion intelligente (Hybrid Ensemble)
-    # Si le mot-clé sémantique est très net et explicite (ex: "connexion", "prix", "handicap", "sav")
-    # on priorise le signal explicite si le modèle neural diverge sur des phrases très courtes
-    final_theme = "autre"
+    final_theme = "accueil"
     final_conf = 0.5
 
-    if kw_theme != "autre" and kw_conf >= 0.6:
-        # Prioriser le mot-clé sémantique explicite (ex: handicap, connexion, réseau, tarifs, sav)
+    if kw_conf >= 0.6:
         final_theme = kw_theme
         final_conf = max(kw_conf, model_conf)
     elif model_theme and model_conf >= 0.65:
         final_theme = model_theme
         final_conf = model_conf
-    elif kw_theme != "autre":
+    elif kw_theme:
         final_theme = kw_theme
         final_conf = kw_conf
     elif model_theme:
         final_theme = model_theme
         final_conf = model_conf
-    else:
-        final_theme = "autre"
-        final_conf = 0.3
 
-    # Garantir que le thème est valide parmi les 15 thèmes
-    if final_theme not in THEME_LABELS and final_theme != "autre":
-        final_theme = "autre"
+    # Garantir que le thème est strictement l'un des 15 thèmes
+    if final_theme not in THEME_LABELS:
+        final_theme = "accueil"
 
     return {
         "sentiment": sentiment_str,

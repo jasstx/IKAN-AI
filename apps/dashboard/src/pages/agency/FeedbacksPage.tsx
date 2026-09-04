@@ -440,7 +440,7 @@ export default function FeedbacksPage() {
                               fontWeight: 700,
                             }}
                           >
-                            {THEME_LABELS[f.analyse_ia?.theme_principal || ''] || f.analyse_ia?.theme_principal || 'Général'}
+                            {THEME_LABELS[f.analyse_ia?.theme_principal || ''] || THEME_LABELS['accueil']}
                           </span>
                         </td>
 
