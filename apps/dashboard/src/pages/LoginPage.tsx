@@ -24,10 +24,16 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
       navigate('/');
     } catch (err: any) {
-      setError(err?.response?.data?.detail || 'Email ou mot de passe incorrect');
+      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        setError('Le serveur met du temps à répondre (réveil en cours). Veuillez réessayer.');
+      } else if (!err.response) {
+        setError('Impossible de joindre le serveur. Veuillez vérifier votre connexion ou réessayer.');
+      } else {
+        setError(err?.response?.data?.detail || 'Email ou mot de passe incorrect');
+      }
     } finally {
       setLoading(false);
     }

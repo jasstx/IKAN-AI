@@ -11,6 +11,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || (isLocal ? '/api/v1' : 'htt
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true, // Envoie les cookies HTTP-only
+  timeout: 30000, // 30 secondes max pour éviter les blocages infinis
   headers: {
     'Content-Type': 'application/json',
   },
