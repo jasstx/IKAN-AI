@@ -50,7 +50,6 @@ from app.schemas.dashboard import (
     StatsAgenceResponse,
     StatsAdminResponse,
 )
-from app.api.v1.endpoints.feedbacks import TREATMENT_STORE
 
 router = APIRouter()
 
@@ -746,10 +745,10 @@ def get_statistics_cx(
     sat_curr = round(pos_curr / total_curr * 100, 1) if total_curr > 0 else 0.0
     sat_prev = round(pos_prev / total_prev * 100, 1) if total_prev > 0 else 0.0
 
-    # Feedbacks traités (AnalyseIA ou statut traité/en_cours dans TREATMENT_STORE)
+    # Feedbacks traités (statut de traitement Closed-Loop ou présence AnalyseIA)
     def _is_treated(f: Feedback) -> bool:
-        fid = str(f.id)
-        if fid in TREATMENT_STORE and TREATMENT_STORE[fid].get("statut") in ("en_cours", "recontacte", "resolu", "escalade"):
+        statut = getattr(f, "statut_traitement", "nouveau")
+        if statut in ("en_cours", "en_traitement", "recontacte", "resolu", "escalade", "ferme"):
             return True
         return f.id in analyses_cur_map
 
@@ -1152,8 +1151,8 @@ def get_statistics_agency(
     sat_prev = round(pos_prev / total_prev * 100, 1) if total_prev > 0 else 0.0
 
     def _is_treated(f: Feedback) -> bool:
-        fid = str(f.id)
-        if fid in TREATMENT_STORE and TREATMENT_STORE[fid].get("statut") in ("en_cours", "recontacte", "resolu", "escalade"):
+        statut = getattr(f, "statut_traitement", "nouveau")
+        if statut in ("en_cours", "en_traitement", "recontacte", "resolu", "escalade", "ferme"):
             return True
         return f.id in analyses_cur_map
 
